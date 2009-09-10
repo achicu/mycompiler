@@ -3,7 +3,6 @@
  *  lex
  *
  *  Created by Alexandru Chiculita on 9/10/09.
- *  Copyright 2009 Adobe Systems Romania SRL. All rights reserved.
  *
  */
 
