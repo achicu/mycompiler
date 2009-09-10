@@ -1,0 +1,19 @@
+method main()
+{
+    code c;
+    vector<number> t;
+    vector<number, number> z;
+    
+    t[0, 1] = 10 + t + getvalue ( 200 + 100, "test" );
+    
+    return;
+}
+
+10 + 5;
+number t = 10 + 5;
+number t = ( 10 + t ) * ( t + 2 * t ) / 4 + 2;
+
+println('testing st\'rings');
+println("testing st\"rings");
+
+t[10].t.z[10, 20].go("naspa", 10, t.callme());
