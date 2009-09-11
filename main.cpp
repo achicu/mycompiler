@@ -35,7 +35,7 @@ void sendToken(char* buff, int size)
 int main (int argc, char * const argv[]) {
     Arena parserArena;
     
-    inputFile = fopen("/www/c++/lex/inputfile.txt", "rb");
+    inputFile = fopen("../../inputfile.txt", "rb");
     if (inputFile)
     {
         if (yyparse() == 0 && parserArena.Result() != 0)

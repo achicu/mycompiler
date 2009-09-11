@@ -42,10 +42,14 @@ std::string ArenaList<Type>::ToString() const
 
 class StatementNode;
 class IdentifierNode;
+class TypeNode;
+class ArgumentNode;
 
 typedef ArenaList<RefPtr<ArenaNode> > NodeList;
 typedef ArenaList<RefPtr<StatementNode> > StatementList;
 typedef ArenaList<RefPtr<IdentifierNode> > IdentifierList;
+typedef ArenaList<RefPtr<TypeNode> > TypeNodeList;
+typedef ArenaList<RefPtr<ArgumentNode> > ArgumentNodeList;
 
 class ExpressionNode: public ArenaNode
 {
@@ -186,11 +190,64 @@ private:
     RefPtr<IdentifierNode> m_identifier;
 };
 
-class MethodStatement: public StatementNode
+class TypeNode: public ArenaNode
 {
 public:
-    MethodStatement(IdentifierNode* identifier, StatementList* nodes)
+    TypeNode(IdentifierNode* typeIdentifier, TypeNodeList* identifierList)
+        : m_typeIdentifier(typeIdentifier)
+        , m_identifierList(identifierList)
+     {
+     }
+     
+     virtual std::string ToString() const;
+     
+private:
+    RefPtr<IdentifierNode> m_typeIdentifier;
+    RefPtr<TypeNodeList> m_identifierList;
+};
+
+class ArgumentNode: public ArenaNode
+{
+public:
+    ArgumentNode(TypeNode* typeNode, IdentifierNode* identifier)
+        : m_typeNode(typeNode)
+        , m_identifier(identifier)
+    {
+    }
+    
+    virtual std::string ToString() const;
+    
+private:
+    RefPtr<TypeNode> m_typeNode;
+    RefPtr<IdentifierNode> m_identifier;
+};
+
+class MethodNode: public StatementNode
+{
+public:
+    MethodNode(TypeNode* typeNode, IdentifierNode* identifier, ArgumentNodeList* argumentsTypeList, StatementList* nodes)
+        : m_typeNode(typeNode)
+        , m_identifier(identifier)
+        , m_argumentsTypeList(argumentsTypeList)
+        , m_nodes(nodes)
+    {
+    }
+    
+    virtual std::string ToString() const;
+    
+private:
+    RefPtr<TypeNode> m_typeNode;
+    RefPtr<IdentifierNode> m_identifier;
+    RefPtr<ArgumentNodeList> m_argumentsTypeList;
+    RefPtr<StatementList> m_nodes;
+};
+
+class StructNode: public StatementNode
+{
+public:
+    StructNode(IdentifierNode* identifier, TypeNode* extends, StatementList* nodes)
         : m_identifier(identifier)
+        , m_extends(extends)
         , m_nodes(nodes)
     {
     }
@@ -199,14 +256,15 @@ public:
     
 private:
     RefPtr<IdentifierNode> m_identifier;
+    RefPtr<TypeNode> m_extends;
     RefPtr<StatementList> m_nodes;
 };
 
-class VarDeclarationStatement: public StatementNode
+class VarStatement: public StatementNode
 {
 public:
-    VarDeclarationStatement(IdentifierNode* typeIdentifier, IdentifierNode* nameIdentifier, ArenaNode* initializer)
-        : m_typeIdentifier(typeIdentifier)
+    VarStatement(TypeNode* typeNode, IdentifierNode* nameIdentifier, ArenaNode* initializer)
+        : m_typeNode(typeNode)
         , m_nameIdentifier(nameIdentifier)
         , m_initializer(initializer)
     {
@@ -215,27 +273,23 @@ public:
     virtual std::string ToString() const;
     
 private:
-    RefPtr<IdentifierNode> m_typeIdentifier;
+    RefPtr<TypeNode> m_typeNode;
     RefPtr<IdentifierNode> m_nameIdentifier;
     RefPtr<ArenaNode> m_initializer;
 };
 
-class TemplateVarDeclarationStatement: public StatementNode
+class ExpressionStatement: public StatementNode
 {
 public:
-    TemplateVarDeclarationStatement(IdentifierNode* typeIdentifier, IdentifierList* identifierList, IdentifierNode* nameIdentifier)
-        : m_typeIdentifier(typeIdentifier)
-        , m_identifierList(identifierList)
-        , m_nameIdentifier(nameIdentifier)
+    ExpressionStatement(ArenaNode* expression)
+        : m_expression(expression)
     {
     }
     
     virtual std::string ToString() const;
     
 private:
-    RefPtr<IdentifierNode> m_typeIdentifier;
-    RefPtr<IdentifierList> m_identifierList;
-    RefPtr<IdentifierNode> m_nameIdentifier;
+    RefPtr<ArenaNode> m_expression;
 };
 
 

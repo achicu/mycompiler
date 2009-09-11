@@ -1,4 +1,17 @@
-method main()
+struct mystruct
+{
+	code c;
+	code b;
+	integer a;
+	vector<integer, string, complex> z;
+	
+	code getString()
+	{
+		return x;
+	}
+}
+
+vector main()
 {
     code c;
     vector<number> t;
@@ -6,8 +19,9 @@ method main()
     
     t[0, 1] = 10 + t + getvalue ( 200 + 100, "test" );
     
-    return;
+    return 10;
 }
+
 
 10 + 5;
 number t = 10 + 5;

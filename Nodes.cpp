@@ -20,7 +20,7 @@ FloatValueNode::FloatValueNode(double value)
 std::string FloatValueNode::ToString() const
 {
     std::ostringstream o;
-    o << "(" << m_value << "f)";
+    o << "(" << m_value << "f " << LocationToString() << ")";
 	return o.str();
 }
 
@@ -34,7 +34,7 @@ IntegerValueNode::IntegerValueNode(int value)
 std::string IntegerValueNode::ToString() const
 {
     std::ostringstream o;
-    o << "(" << m_value << ")";
+    o << "(" << m_value << ' ' << LocationToString() << ")";
 	return o.str();
 
 }
@@ -49,7 +49,7 @@ StringValueNode::StringValueNode(char* value)
 std::string StringValueNode::ToString() const
 {
     std::ostringstream o;
-    o << "(\"" << m_value << "\")";
+    o << "(\"" << m_value << "\" " << LocationToString() << ")";
 	return o.str();
 }
 
@@ -71,7 +71,7 @@ std::string IdentifierNode::ToString() const
 
 std::string ExpressionNode::ToString() const
 {
-	return "[ExpressionNode]";
+	return std::string("[ExpressionNode ") + LocationToString() + "]";
 }
 
 // ============ CallNode ============
@@ -89,6 +89,8 @@ std::string CallNode::ToString() const
     if (m_arguments.Ptr())
         o << m_arguments->ToString();
     
+    o << " " << LocationToString();
+    
     o << ")";
 	return o.str();
 }
@@ -97,7 +99,7 @@ std::string CallNode::ToString() const
 
 std::string StatementNode::ToString() const
 {
-	return "[StatementNode]";
+	return std::string("[StatementNode ") + LocationToString() + "]";
 }
 
 // ============ BinaryOpNode ============
@@ -114,6 +116,8 @@ std::string BinaryOpNode::ToString() const
 
     if (m_node2.Ptr())
         o << m_node2->ToString();
+    
+    o << " " << LocationToString();
     
     o << ")";
     
@@ -135,6 +139,8 @@ std::string AssignNode::ToString() const
     if (m_node2.Ptr())
         o << m_node2->ToString();
     
+    o << " " << LocationToString();
+    
     o << ")";
     
     return o.str();
@@ -152,6 +158,8 @@ std::string AccessorNode::ToString() const
 
     if (m_nodes.Ptr())
         o << m_nodes->ToString();
+    
+    o << " " << LocationToString();
     
     o << "]";
     
@@ -171,17 +179,43 @@ std::string DotNode::ToString() const
     if (m_identifier.Ptr())
         o << m_identifier->ToString();
     
+    o << " " << LocationToString();
+    
     o << "]";
     
     return o.str();
 }
 
-// ============ MethodStatement ============
+// ============ ArgumentNode ============
 
-std::string MethodStatement::ToString() const
+std::string ArgumentNode::ToString() const
 {
     std::ostringstream o;
-    o << "[MethodStatement ";
+    o << "[ArgumentNode ";
+    
+    if (m_typeNode.Ptr())
+        o << m_typeNode->ToString() << " ";
+
+    if (m_identifier.Ptr())
+        o << m_identifier->ToString() << " code ";
+    
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+
+// ============ MethodNode ============
+
+std::string MethodNode::ToString() const
+{
+    std::ostringstream o;
+    o << "[MethodNode ";
+    
+    if (m_typeNode.Ptr())
+        o << m_typeNode->ToString() << " ";
 
     if (m_identifier.Ptr())
         o << m_identifier->ToString() << " code ";
@@ -189,45 +223,87 @@ std::string MethodStatement::ToString() const
     if (m_nodes.Ptr())
         o << m_nodes->ToString();
     
-    o << "]";
-    
-    return o.str();
-}
-
-// ============ VarDeclarationStatement ============
-
-std::string VarDeclarationStatement::ToString() const
-{
-    std::ostringstream o;
-    o << "[Var ";
-
-    if (m_typeIdentifier.Ptr())
-        o << m_typeIdentifier->ToString() << " ";
-
-    if (m_nameIdentifier.Ptr())
-        o << m_nameIdentifier->ToString();
+    o << " " << LocationToString();
     
     o << "]";
     
     return o.str();
 }
 
+// ============ StructNode ============
 
-// ============ TemplateVarDeclarationStatement ============
-
-std::string TemplateVarDeclarationStatement::ToString() const
+std::string StructNode::ToString() const
 {
     std::ostringstream o;
-    o << "[TemplateVar ";
+    o << "[StructNode ";
+
+    if (m_extends.Ptr())
+        o << "extends " << m_extends->ToString() << " ";
+
+    if (m_identifier.Ptr())
+        o << m_identifier->ToString() << " with ";
+
+    if (m_nodes.Ptr())
+        o << m_nodes->ToString();
+    
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+// ============ TypeNode ============
+
+std::string TypeNode::ToString() const
+{
+    std::ostringstream o;
+    o << "[TypeNode ";
 
     if (m_typeIdentifier.Ptr())
         o << m_typeIdentifier->ToString() << " ";
     
     if (m_identifierList.Ptr())
-        o << m_identifierList->ToString() << " ";    
+        o << m_identifierList->ToString();
+    
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+// ============ VarStatement ============
+
+std::string VarStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[Var ";
+
+    if (m_typeNode.Ptr())
+        o << m_typeNode->ToString() << " ";
 
     if (m_nameIdentifier.Ptr())
         o << m_nameIdentifier->ToString();
+    
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+// ============ ExpressionStatement ============
+
+std::string ExpressionStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[ExpressionStatement ";
+
+    if (m_expression.Ptr())
+        o << m_expression->ToString();
+        
+    o << " " << LocationToString();
     
     o << "]";
     
