@@ -28,7 +28,7 @@ extern char *yytext;
 %}
 
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
-%token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END
+%token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN
 %token RETURN_TOKEN EXTENDS STRUCT
 
 %left MINUS PLUS
@@ -53,7 +53,7 @@ extern char *yytext;
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
 %type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement AssignmentStatement 
-%type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode
+%type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement
 %type <statementList> GlobalStatementList InMethodStatementList InStructStatementList
 %type <identifierList> IdentifierList
 %type <typeNodeList> TypeDeclarationList
@@ -98,6 +98,7 @@ GlobalStatement:
 | ExpressionStatement
 | VariableDeclarationStatement
 | ReturnStatement
+| DebugStatement
 ;
 
 InStructStatement:
@@ -111,6 +112,11 @@ InMethodStatement:
 | ExpressionStatement
 | VariableDeclarationStatement
 | ReturnStatement
+| DebugStatement
+;
+
+DebugStatement:
+ DEBUG_TOKEN Expression SEMICOLON { $$ = new DebugStatement($2); DBG($$, @1, @3); }
 ;
 
 StructNode:

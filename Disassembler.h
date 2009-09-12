@@ -12,7 +12,8 @@
 #include <vector>
 
 union Bytecode;
+class GlobalData;
 
-void Disassemble(std::vector<Bytecode>* buffer);
+void Disassemble(GlobalData* globalData, std::vector<Bytecode>* buffer);
 
 #endif // DISASSEMBLER_H

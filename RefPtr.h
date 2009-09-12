@@ -87,9 +87,21 @@ class RefPtr
             return m_ptr;
         }
         
+        void operator=(const RefPtr<Type>& other)
+        {
+            if (m_ptr != 0)
+                m_ptr->Deref();
+                
+            m_ptr = other.m_ptr;
+            
+            if (m_ptr != 0)
+                m_ptr->Ref();
+            
+        }
+        
         void operator=(const PassRef<Type>& other) { m_ptr = other.m_ptr; other.m_ptr = 0; }
         
-        void operator==(Type* ptr) const
+        bool operator==(Type* ptr) const
         {
             return m_ptr == ptr;
         }

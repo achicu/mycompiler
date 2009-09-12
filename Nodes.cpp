@@ -234,7 +234,12 @@ Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     reg1 = m_node1->EmitBytecode(generator, dst);
     
     RefPtr<Register> reg2 = generator->NewTempRegister();
-    m_node2->EmitBytecode(generator, reg2.Ptr());
+    reg2 = m_node2->EmitBytecode(generator, reg2.Ptr());
+    
+    if (reg1->GetType() != reg2->GetType())
+    {
+        generator->CoerceInPlace(reg2.Ptr(), reg1->GetType());
+    }
     
     generator->EmitBytecode(op_assign);
     generator->EmitRegister(reg1.Ptr());
@@ -427,6 +432,11 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         Property* property = generator->GetProperty(m_nameIdentifier->Value());
         assert(property);
         
+        if (property->GetRegister()->GetType() != initializedValue->GetType())
+        {
+            generator->CoerceInPlace(initializedValue.Ptr(), property->GetRegister()->GetType());
+        }
+        
         generator->EmitBytecode(op_assign);
         generator->EmitRegister(property->GetRegister());
         generator->EmitRegister(initializedValue.Ptr());
@@ -460,4 +470,47 @@ Register* ExpressionStatement::EmitBytecode(BytecodeGenerator* generator, Regist
         dst = generator->NewTempRegister().Ptr();
     
     return m_expression->EmitBytecode(generator, dst);
+}
+
+// ============ ExpressionStatement ============
+
+std::string DebugStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[DebugStatement ";
+
+    if (m_expression.Ptr())
+        o << m_expression->ToString();
+        
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(m_expression.Ptr());
+    
+    if (!dst)
+        dst = generator->NewTempRegister().Ptr();
+    
+    dst = m_expression->EmitBytecode(generator, dst);
+    
+    if (generator->GetGlobalData()->GetIntType() == dst->GetType())
+    {
+        generator->EmitBytecode(op_debug_int);
+    }
+    else if (generator->GetGlobalData()->GetFloatType() == dst->GetType())
+    {
+        generator->EmitBytecode(op_debug_float);
+    }
+    else if (generator->GetGlobalData()->GetStringType() == dst->GetType())
+    {
+        generator->EmitBytecode(op_debug_string);
+    }
+    generator->EmitRegister(dst);
+    
+    return dst;
 }

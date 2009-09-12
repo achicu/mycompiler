@@ -18,7 +18,7 @@ struct BytecodeMetaData
     int length;
 };
 
-void Disassemble(std::vector<Bytecode>* buffer)
+void Disassemble(GlobalData* globalData, std::vector<Bytecode>* buffer)
 {
     static BytecodeMetaData bytecodeList[op_last];
     static bool initialized = false;
@@ -51,13 +51,13 @@ void Disassemble(std::vector<Bytecode>* buffer)
                     printf("\n\tregister %d", byte.RegisterNumber);
                 break;
                 case 's':
-                    printf("\n\tconstant string index %d", byte.ConstantStringIndex);
+                    printf("\n\tconstant string index %d \"%s\"", byte.ConstantStringIndex, globalData->GetConstantString(byte.ConstantStringIndex).c_str());
                 break;
                 case 'i':
                     printf("\n\tconstant int %d", byte.ConstantInt);
                 break;
                 case 'f':
-                    printf("\n\tconstant float index %d", byte.ConstantFloatIndex);
+                    printf("\n\tconstant float index %d %lf", byte.ConstantFloatIndex, globalData->GetConstantFloat(byte.ConstantFloatIndex));
                 break;
             }
             ++ structure;

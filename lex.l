@@ -48,6 +48,7 @@ struct                  return STRUCT;
 extends                 return EXTENDS;
 method                  return METHOD;
 return                  return RETURN_TOKEN;
+debug                   return DEBUG_TOKEN;
 [0-9]+\.[0-9]+          return FLOAT_NUMBER;
 [0-9]+                  return INTEGER_NUMBER;
 [a-zA-Z][a-zA-Z0-9]*    return IDENTIFIER;

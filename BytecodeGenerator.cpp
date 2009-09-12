@@ -8,6 +8,7 @@
 
 #include "BytecodeGenerator.h"
 #include "Disassembler.h"
+#include "Interpreter.h"
 #include "OpCodes.h"
 
 Property* Scope::GetProperty(BytecodeGenerator* generator, std::string& name) const
@@ -84,6 +85,7 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
             generator->EmitBytecode(op_int_divide);
         break;
         default:
+            printf(" %c operation not supported on ints\n", op);
             assert(false);
     }
     
@@ -120,6 +122,7 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
             generator->EmitBytecode(op_float_divide);
         break;
         default:
+            printf(" %c operation not supported on floats\n", op);
             assert(false);
     }
     
@@ -132,7 +135,30 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
 
 Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
 {
-    assert(false);
+    if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
+    {
+        // reverse if cannot do it
+        return type2->EmitBinaryOpBytecode(generator, this, op, reg1, reg2, dst);
+    }
+    
+    assert(reg1->GetType() == reg2->GetType());
+    dst->SetType(this);
+    
+    switch(op)
+    {
+        case '+':
+            generator->EmitBytecode(op_string_plus);
+        break;
+        default:
+            printf(" %c operation not supported on strings\n", op);
+            assert(false);
+    }
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(reg1);
+    generator->EmitRegister(reg2);
+    
+    return dst;
 }
 
 GlobalData::GlobalData()
@@ -156,7 +182,7 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
         return (*iter).second.Ptr();
     }
     
-    PassRef<Type> type (AdoptRef( new Type(completeName) ));
+    RefPtr<Type> type (AdoptRef( new Type(completeName) ));
     
     TypeNodeList* typeNodeList = typeNode->GetTypeNodeList();
     if (typeNodeList)
@@ -190,9 +216,22 @@ int GlobalData::GetConstantStringIndex(std::string d)
     return m_stringConstants.size() - 1;
 }
 
+double GlobalData::GetConstantFloat(int i)
+{
+    assert(i < m_floatConstants.size());
+    return m_floatConstants.at(i);
+}
+
+std::string GlobalData::GetConstantString(int i)
+{
+    assert(i < m_stringConstants.size());
+    return m_stringConstants.at(i);
+}
+
 BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope, MethodNode* method)
     : m_globalData(globalData)
     , m_statements(method->GetStatementList())
+    , m_maxRegisterCount(0)
 {
     assert(method);
     
@@ -225,6 +264,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
 BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* statements)
     : m_globalData(globalData)
     , m_statements(statements)
+    , m_maxRegisterCount(0)
 {
     m_localScope.AdoptRef(new Scope(0));
     m_calleeRegisters = 0;
@@ -236,6 +276,9 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
     for (int i=0; i<statements->size(); ++i)
     {
         StatementNode* statement = statements->at(i).Ptr();
+        if (statement == 0)
+            continue;
+        
         if (statement->IsMethodNode())
         {
             MethodNode* methodNode = static_cast<MethodNode*>(statement);
@@ -270,6 +313,8 @@ PassRef<Register> BytecodeGenerator::NewRegister()
 
     RefPtr<Register> reg(AdoptRef(new Register(m_registers.size())));
     m_registers.push_back( reg );
+    
+    m_maxRegisterCount = (m_maxRegisterCount > m_registers.size()) ? m_maxRegisterCount : m_registers.size();
     
     return reg.ReleaseRef();
 }
@@ -338,11 +383,15 @@ void BytecodeGenerator::Generate()
         for (int i=0; i<statements->size(); ++i)
         {
             StatementNode* statement = statements->at(i).Ptr();
+            if (statement == 0)
+                continue;
+            
             EmitNode(statement);
         }
     }
     
-    Disassemble(&m_bytes);
+    Disassemble(m_globalData.Ptr(), &m_bytes);
+    Interpret(m_globalData.Ptr(), m_maxRegisterCount, &m_bytes);
 }
 
 void BytecodeGenerator::EmitBytecode(int bytecode)
@@ -413,6 +462,21 @@ void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
         else if (m_globalData->GetStringType() == otherType)
         {
             EmitBytecode(op_coerce_float_string);
+            EmitRegister(reg);
+            converted = true;
+        }
+    }
+    else if (m_globalData->GetStringType() == type)
+    {
+        if (m_globalData->GetIntType() == otherType)
+        {
+            EmitBytecode(op_coerce_string_int);
+            EmitRegister(reg);
+            converted = true;
+        }
+        else if (m_globalData->GetFloatType() == otherType)
+        {
+            EmitBytecode(op_coerce_string_float);
             EmitRegister(reg);
             converted = true;
         }

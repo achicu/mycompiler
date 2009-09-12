@@ -188,6 +188,9 @@ public:
     Type* GetFloatType() const { return m_floatType.Ptr(); }
     Type* GetStringType() const { return m_stringType.Ptr(); }
 //    Type* GetVectorType() const { return m_vectorType.Ptr(); }
+
+    double GetConstantFloat(int i);
+    std::string GetConstantString(int i);
     
 private:
     TypeList m_typeList;
@@ -228,6 +231,8 @@ public:
     Property* GetProperty(std::string& name);
     
     void CoerceInPlace(Register* reg, Type* otherType);
+    
+    int GetMaxRegisterCount() const { return m_maxRegisterCount; }
 
 private:  
     void DeclareArguments(MethodNode* method);
@@ -240,6 +245,7 @@ private:
     std::vector<Bytecode> m_bytes;
     std::vector<RefPtr<Register> > m_registers;
     int m_calleeRegisters;
+    int m_maxRegisterCount;
 };
 
 #endif // BYTECODEGENERATOR_H
