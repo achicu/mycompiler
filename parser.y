@@ -178,6 +178,8 @@ Identifier:
 Literal:
   INTEGER_NUMBER    { $$ = new IntegerValueNode(atoi(yytext)); DBG($$, @1, @1); }
 | FLOAT_NUMBER      { $$ = new FloatValueNode(atof(yytext)); DBG($$, @1, @1); }
+| MINUS INTEGER_NUMBER    { $$ = new IntegerValueNode(-atoi(yytext)); DBG($$, @1, @1); }
+| MINUS FLOAT_NUMBER      { $$ = new FloatValueNode(-atof(yytext)); DBG($$, @1, @1); }
 | STRING_TOKEN      { $$ = new StringValueNode(yytext); DBG($$, @1, @1); }
 | CallExpression    { $$ = $1; DBG($$, @1, @1); }
 | Identifier        { $$ = $1; DBG($$, @1, @1); }

@@ -603,6 +603,8 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         generator->EmitNode(m_ifBranch->at(i).Ptr());
     }
     
+    generator->CleanupRegisters();
+    
     // patch the jump
     int jumpLabel = generator->GetLabel();
     generator->PatchConstantInt(patchJumpLabel, jumpLabel);
@@ -613,6 +615,7 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         {
             generator->EmitNode(m_elseBranch->at(i).Ptr());
         }
+        generator->CleanupRegisters();
     }
     
     return 0;

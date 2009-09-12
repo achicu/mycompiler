@@ -25,6 +25,7 @@ public:
     Register(int number) 
         : m_number(number)
         , m_ignored(false)
+        , m_type(0)
     {
     }
    
@@ -212,6 +213,8 @@ public:
 
     BytecodeGenerator(GlobalData* globalData, Scope* parentScope, MethodNode* method);
     BytecodeGenerator(GlobalData* globalData, StatementList* statements);
+
+    void CleanupRegisters();
 
     PassRef<Register> NewTempRegister();    
     PassRef<Register> NewRegister();    

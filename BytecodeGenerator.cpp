@@ -306,7 +306,7 @@ PassRef<Register> BytecodeGenerator::NewTempRegister()
     return r;
 }
 
-PassRef<Register> BytecodeGenerator::NewRegister()
+void BytecodeGenerator::CleanupRegisters()
 {
     while( m_registers.size() > m_calleeRegisters && m_registers.back()->HasOneRef() && m_registers.back()->IsIgnored())
     {
@@ -316,6 +316,11 @@ PassRef<Register> BytecodeGenerator::NewRegister()
         
         m_registers.pop_back();
     }
+}
+
+PassRef<Register> BytecodeGenerator::NewRegister()
+{
+    CleanupRegisters();
 
     RefPtr<Register> reg(AdoptRef(new Register(m_registers.size())));
     m_registers.push_back( reg );
