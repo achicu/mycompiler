@@ -730,3 +730,41 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     return 0;
 }
 
+// ===================
+
+const char* UnaryOpcodeToString(UnaryOpcode opcode)
+{
+    switch(opcode)
+    {
+        case unary_op_not: return "unary_op_not";
+        case unary_op_plusplus_prefix: return "unary_op_plusplus_prefix";
+        case unary_op_minusminus_prefix: return "unary_op_minusminus_prefix";
+        case unary_op_plusplus_sufix: return "unary_op_plusplus_sufix";
+        case unary_op_minusminus_sufix: return "unary_op_minusminus_sufix";
+    }
+    
+    assert(false);
+    return "undefined";
+};
+
+const char* BinaryOpcodeToString(BinaryOpcode opcode)
+{
+    switch(opcode)
+    {
+        case binary_op_plus: return "binary_op_plus";
+        case binary_op_minus: return "binary_op_minus";
+        case binary_op_multiply: return "binary_op_multiply";
+        case binary_op_divide: return "binary_op_divide";
+        case binary_op_less: return "binary_op_less";
+        case binary_op_more: return "binary_op_more";
+        case binary_op_equal: return "binary_op_equal";
+        case binary_op_less_or_equal: return "binary_op_less_or_equal";
+        case binary_op_more_or_equal: return "binary_op_more_or_equal";
+        case binary_op_bit_and: return "binary_op_bit_and";
+        case binary_op_bit_or: return "binary_op_bit_or";
+        case binary_op_bit_xor: return "binary_op_bit_xor";
+    }
+    
+    assert(false);
+    return "undefined";
+}

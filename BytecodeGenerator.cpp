@@ -25,14 +25,14 @@ Property* Scope::GetProperty(BytecodeGenerator* generator, std::string& name) co
     return 0;
 }
 
-bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2)
+bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2)
 {
     if (type2 != this)
     {
         // have to convert me or the other to my type
         if (!type2->IsBuiltin())
         {
-            printf("Error: trying to do %s %c %s\n", Name().c_str(), op, type2->Name().c_str());
+            printf("Error: trying to do %s %s %s\n", Name().c_str(), BinaryOpcodeToString(op), type2->Name().c_str());
             exit(1);
         }
         
@@ -52,22 +52,22 @@ bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, 
     return true;
 }
 
-Register* Type::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+Register* Type::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
 {
     // arbitrary type operators not supported, yet
-    printf("Error: trying to do %s %c %s\n", Name().c_str(), op, type2->Name().c_str());
+    printf("Error: trying to do %s %s %s\n", Name().c_str(), BinaryOpcodeToString(op), type2->Name().c_str());
     exit(1);
 }
 
-Register* Type::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Register* reg1, Register* dst)
+Register* Type::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst)
 {
     // arbitrary type operators not supported, yet
-    printf("Error: trying to do %c %s\n", op, Name().c_str());
+    printf("Error: trying to do %s %s\n", UnaryOpcodeToString(op), Name().c_str());
     exit(1);
 }
 
 
-Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
 {
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
     {
@@ -80,29 +80,29 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
     
     switch(op)
     {
-        case '+':
+        case binary_op_plus:
             generator->EmitBytecode(op_int_plus);
         break;
-        case '*':
+        case binary_op_multiply:
             generator->EmitBytecode(op_int_multiply);
         break;
-        case '-':
+        case binary_op_minus:
             generator->EmitBytecode(op_int_minus);
         break;
-        case '/':
+        case binary_op_divide:
             generator->EmitBytecode(op_int_divide);
         break;
-        case '<':
+        case binary_op_less:
             generator->EmitBytecode(op_int_less);
         break;
-        case '>':
+        case binary_op_more:
             generator->EmitBytecode(op_int_more);
         break;
-        case '=':
+        case binary_op_equal:
             generator->EmitBytecode(op_int_equals);
         break;
         default:
-            printf(" %c operation not supported on ints\n", op);
+            printf("%s operation not supported on ints\n", BinaryOpcodeToString(op));
             exit(1);
     }
     
@@ -113,17 +113,17 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
     return dst;
 }
 
-Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Register* reg1, Register* dst)
+Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst)
 {
     dst->SetType(this);
     
     switch(op)
     {
-        case '!':
+        case unary_op_not:
             generator->EmitBytecode(op_int_not);
         break;
         default:
-            printf(" unary %c operation not supported on ints\n", op);
+            printf(" unary %s operation not supported on ints\n", UnaryOpcodeToString(op));
             exit(1);
     }
     
@@ -134,7 +134,7 @@ Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Re
 }
 
 
-Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
 {
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
     {
@@ -147,32 +147,32 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
     
     switch(op)
     {
-        case '+':
+        case binary_op_plus:
             generator->EmitBytecode(op_float_plus);
         break;
-        case '*':
+        case binary_op_multiply:
             generator->EmitBytecode(op_float_multiply);
         break;
-        case '-':
+        case binary_op_minus:
             generator->EmitBytecode(op_float_minus);
         break;
-        case '/':
+        case binary_op_divide:
             generator->EmitBytecode(op_float_divide);
         break;
-        case '<':
+        case binary_op_less:
             generator->EmitBytecode(op_float_less);
             dst->SetType(generator->GetGlobalData()->GetIntType());
         break;
-        case '>':
+        case binary_op_more:
             generator->EmitBytecode(op_float_more);
             dst->SetType(generator->GetGlobalData()->GetIntType());
         break;
-        case '=':
+        case binary_op_equal:
             generator->EmitBytecode(op_float_equals);
             dst->SetType(generator->GetGlobalData()->GetIntType());
         break;
         default:
-            printf(" %c operation not supported on floats\n", op);
+            printf("%s operation not supported on floats\n", BinaryOpcodeToString(op));
             exit(1);
     }
     
@@ -183,17 +183,17 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
     return dst;
 }
 
-Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Register* reg1, Register* dst)
+Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst)
 {
     dst->SetType(this);
     
     switch(op)
     {
-        case '!':
+        case unary_op_not:
             generator->EmitBytecode(op_float_not);
         break;
         default:
-            printf(" unary %c operation not supported on ints\n", op);
+            printf("%s operation not supported on ints\n", UnaryOpcodeToString(op));
             exit(1);
     }
     
@@ -203,7 +203,7 @@ Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, 
     return dst;
 }
 
-Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
 {
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
     {
@@ -216,11 +216,11 @@ Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* t
     
     switch(op)
     {
-        case '+':
+        case binary_op_plus:
             generator->EmitBytecode(op_string_plus);
         break;
         default:
-            printf(" %c operation not supported on strings\n", op);
+            printf("%s operation not supported on strings\n", BinaryOpcodeToString(op));
             exit(1);
     }
     

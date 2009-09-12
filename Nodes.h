@@ -14,6 +14,34 @@
 #include <vector>
 #include <sstream>
 
+enum UnaryOpcode
+{
+    unary_op_not,
+    unary_op_plusplus_prefix,
+    unary_op_minusminus_prefix,
+    unary_op_plusplus_sufix,
+    unary_op_minusminus_sufix,
+};
+
+enum BinaryOpcode
+{
+    binary_op_plus,
+    binary_op_minus,
+    binary_op_multiply,
+    binary_op_divide,
+    binary_op_less,
+    binary_op_more,
+    binary_op_equal,
+    binary_op_less_or_equal,
+    binary_op_more_or_equal,
+    binary_op_bit_and,
+    binary_op_bit_or,
+    binary_op_bit_xor
+};
+
+const char* UnaryOpcodeToString(UnaryOpcode opcode);
+const char* BinaryOpcodeToString(BinaryOpcode opcode);
+
 class BytecodeGenerator;
 
 template <typename Type>
@@ -143,7 +171,7 @@ public:
 class UnaryOpNode: public ArenaNode
 {
 public:
-    UnaryOpNode(char op, ArenaNode* node1)
+    UnaryOpNode(UnaryOpcode op, ArenaNode* node1)
         : m_op(op)
         , m_node1(node1)
     {
@@ -154,14 +182,14 @@ public:
     virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
 
 private:
-    char m_op;
+    UnaryOpcode m_op;
     RefPtr<ArenaNode> m_node1;
 };
 
 class BinaryOpNode: public ArenaNode
 {
 public:
-    BinaryOpNode(char op, ArenaNode* node1, ArenaNode* node2)
+    BinaryOpNode(BinaryOpcode op, ArenaNode* node1, ArenaNode* node2)
         : m_op(op)
         , m_node1(node1)
         , m_node2(node2)
@@ -173,7 +201,7 @@ public:
     virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
 
 private:
-    char m_op;
+    BinaryOpcode m_op;
     RefPtr<ArenaNode> m_node1;
     RefPtr<ArenaNode> m_node2;
 };

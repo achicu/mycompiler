@@ -167,26 +167,26 @@ LeftSide:
 
 NegationExpression:
   Literal
-| NOT NegationExpression                            { $$ = new UnaryOpNode('!', $2); DBG($$, @1, @2); }
+| NOT NegationExpression                            { $$ = new UnaryOpNode(unary_op_not, $2); DBG($$, @1, @2); }
 ;
 
 MultiplyExpression:
   NegationExpression
-| MultiplyExpression MULTIPLY NegationExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
-| MultiplyExpression DIVIDE NegationExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression MULTIPLY NegationExpression    { $$ = new BinaryOpNode(binary_op_multiply, $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression DIVIDE NegationExpression      { $$ = new BinaryOpNode(binary_op_divide, $1, $3); DBG($$, @1, @3); }
 ;
 
 PlusExpression:
   MultiplyExpression
-| PlusExpression PLUS MultiplyExpression    { $$ = new BinaryOpNode('+', $1, $3); DBG($$, @1, @3); }
-| PlusExpression MINUS MultiplyExpression   { $$ = new BinaryOpNode('-', $1, $3); DBG($$, @1, @3); }
+| PlusExpression PLUS MultiplyExpression    { $$ = new BinaryOpNode(binary_op_plus, $1, $3); DBG($$, @1, @3); }
+| PlusExpression MINUS MultiplyExpression   { $$ = new BinaryOpNode(binary_op_minus, $1, $3); DBG($$, @1, @3); }
 ;
 
 CompareExpression:
   PlusExpression
-| CompareExpression LESS PlusExpression         { $$ = new BinaryOpNode('<', $1, $3); DBG($$, @1, @3); }
-| CompareExpression MORE PlusExpression         { $$ = new BinaryOpNode('>', $1, $3); DBG($$, @1, @3); }
-| CompareExpression D_EQUALS PlusExpression     { $$ = new BinaryOpNode('=', $1, $3); DBG($$, @1, @3); }
+| CompareExpression LESS PlusExpression         { $$ = new BinaryOpNode(binary_op_less, $1, $3); DBG($$, @1, @3); }
+| CompareExpression MORE PlusExpression         { $$ = new BinaryOpNode(binary_op_more, $1, $3); DBG($$, @1, @3); }
+| CompareExpression D_EQUALS PlusExpression     { $$ = new BinaryOpNode(binary_op_equal, $1, $3); DBG($$, @1, @3); }
 ;
 
 

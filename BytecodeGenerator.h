@@ -62,8 +62,8 @@ public:
     virtual bool IsBuiltin() const { return false; }
     virtual bool IsRefCounted() const { return false; }
     
-    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char m_op, Register* reg1, Register* reg2, Register* dst);
-    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, char m_op, Register* reg1, Register* dst);
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode m_op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
 
 private:
     std::string m_name;
@@ -83,7 +83,7 @@ public:
     virtual bool IsBuiltin() const { return true; }
 
 protected:
-    bool CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2);
+    bool CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2);
 };
 
 class IntType: public BuiltinType
@@ -96,8 +96,8 @@ public:
     
     virtual int GetPriority() const { return 0; }
         
-    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
-    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, char m_op, Register* reg1, Register* dst);
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
     
 };
 
@@ -111,8 +111,8 @@ public:
     
     virtual int GetPriority() const { return 1; }
     
-    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
-    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, char m_op, Register* reg1, Register* dst);
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
 
 };
 
@@ -127,7 +127,7 @@ public:
     virtual bool IsRefCounted() const { return true; }
     virtual int GetPriority() const { return 2; }
     
-    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
 
 };
 

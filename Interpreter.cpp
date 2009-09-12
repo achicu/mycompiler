@@ -154,7 +154,7 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
             R(1).asFloat = R(2).asFloat * R(3).asFloat;
         NEXT()
         OPCODE(op_float_divide)
-            if (R(3).asInt != 0)
+            if (R(3).asFloat != 0)
                 R(1).asFloat = R(2).asFloat / R(3).asFloat;
             else
                 R(1).asFloat = 0;
