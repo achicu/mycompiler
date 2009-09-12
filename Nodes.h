@@ -14,13 +14,17 @@
 #include <vector>
 #include <sstream>
 
+enum AssignOpcode
+{ 
+    assign_op_plusplus_prefix,
+    assign_op_minusminus_prefix,
+    assign_op_plusplus_sufix,
+    assign_op_minusminus_sufix
+};
+
 enum UnaryOpcode
 {
-    unary_op_not,
-    unary_op_plusplus_prefix,
-    unary_op_minusminus_prefix,
-    unary_op_plusplus_sufix,
-    unary_op_minusminus_sufix,
+    unary_op_not
 };
 
 enum BinaryOpcode
@@ -40,6 +44,7 @@ enum BinaryOpcode
     
 };
 
+const char* AssignOpcodeToString(AssignOpcode opcode);
 const char* UnaryOpcodeToString(UnaryOpcode opcode);
 const char* BinaryOpcodeToString(BinaryOpcode opcode);
 
@@ -138,6 +143,7 @@ public:
     std::string& Value() { return m_value; }
     
     virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    virtual PassRef<Accessor> GetAccessor(BytecodeGenerator* generator);
     
 private:
     std::string m_value;
@@ -146,16 +152,17 @@ private:
 class CallNode: public ArenaNode
 {
 public:
-    CallNode(ArenaNode* name, NodeList* arguments)
+    CallNode(IdentifierNode* name, NodeList* arguments)
         : m_name(name)
         , m_arguments(arguments)
     {
     }
     
     virtual std::string ToString() const;
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
 
 private:
-    RefPtr<ArenaNode> m_name;
+    RefPtr<IdentifierNode> m_name;
     RefPtr<NodeList> m_arguments;
 };
 
@@ -167,6 +174,24 @@ public:
     virtual bool IsStructNode() const { return false; }
     virtual bool IsMethodNode() const { return false; }
     virtual bool IsVarStatement() const { return false; }
+};
+
+class AssignOpNode: public ArenaNode
+{
+public:
+    AssignOpNode(AssignOpcode op, ArenaNode* node1)
+        : m_op(op)
+        , m_node1(node1)
+    {
+    }
+
+    virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+
+private:
+    AssignOpcode m_op;
+    RefPtr<ArenaNode> m_node1;
 };
 
 class UnaryOpNode: public ArenaNode
@@ -317,6 +342,7 @@ public:
     StatementList* GetStatementList() const { return m_nodes.Ptr(); }
     ArgumentNodeList* GetArgumentNodeList() const { return m_argumentsTypeList.Ptr(); }
     TypeNode* GetReturnType() const { return m_typeNode.Ptr(); }
+    IdentifierNode* Identifier() const { return m_identifier.Ptr(); }
     
 private:
     RefPtr<TypeNode> m_typeNode;

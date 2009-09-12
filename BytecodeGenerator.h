@@ -18,6 +18,7 @@
 
 class BytecodeGenerator;
 class Type;
+class MethodEnv;
 
 class Register : public RefCounted
 {
@@ -62,8 +63,9 @@ public:
     virtual bool IsBuiltin() const { return false; }
     virtual bool IsRefCounted() const { return false; }
     
-    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode m_op, Register* reg1, Register* reg2, Register* dst);
-    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst);
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
 
 private:
     std::string m_name;
@@ -98,6 +100,7 @@ public:
         
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
     
 };
 
@@ -113,6 +116,7 @@ public:
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
 
 };
 
@@ -144,11 +148,64 @@ public:
     void SetRegister(Register* reg) { m_register = reg; }
     
     std::string Name() const { return m_name; }
+    Type* GetType() const { return m_type.Ptr(); }
+    
 private:
     std::string m_name;
     RefPtr<Type> m_type;
     RefPtr<Register> m_register;
     
+};
+
+class Accessor: public RefCounted
+{
+public:
+    Accessor(Type* type)
+        : m_type(type)
+    {
+    }
+    
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst) = 0;
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst) = 0;
+    
+    Type* GetType() const { return m_type.Ptr(); }
+
+private:
+    RefPtr<Type> m_type;
+};
+
+class LocalPropertyAccessor: public Accessor
+{
+public:
+    LocalPropertyAccessor(Type* type, Register* reg)
+        : Accessor(type)
+        , m_register(reg)
+    {
+    }
+    
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst);
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst);
+
+private:
+    RefPtr<Register> m_register;
+};
+
+class ParentPropertyAccessor: public Accessor
+{
+public:
+    ParentPropertyAccessor(Type* type, int scopeNumber, int registerNumber)
+        : Accessor(type)
+        , m_scopeNumber(scopeNumber)
+        , m_registerNumber(registerNumber)
+    {
+    }
+
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst);
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst);
+
+private:
+    int m_scopeNumber;
+    int m_registerNumber;
 };
 
 class Scope: public RefCounted
@@ -160,7 +217,8 @@ public:
     {
     }
     
-    Property* GetProperty(BytecodeGenerator* generator, std::string& name) const;
+    PassRef<Accessor> GetProperty(std::string& name) const;
+    bool HasLocalProperty(std::string& name) const;
     
     Property* PutProperty(std::string& name, Type* type)
     {
@@ -170,6 +228,8 @@ public:
     }
     
 private:
+    Property* LookupProperty(std::string& name, int& scopeNumber) const;
+
     RefPtr<Scope> m_parentScope;
     PropertyMap m_properties;
 };
@@ -186,10 +246,13 @@ union Bytecode
 class GlobalData: public RefCounted
 {
     typedef std::map<std::string, RefPtr<Type> > TypeList;
+    typedef std::map<std::string, RefPtr<MethodEnv> > MethodList;
 public:
     GlobalData();
     
     Type* GetTypeOf(TypeNode* typeNode);
+    MethodEnv* GetMethod(std::string name);
+    
     int GetConstantFloatIndex(double d);
     int GetConstantStringIndex(std::string d);
     
@@ -203,6 +266,8 @@ public:
     
 private:
     TypeList m_typeList;
+    MethodList m_methodList;
+    
     std::vector<double> m_floatConstants;
     std::vector<std::string> m_stringConstants;
 
@@ -211,6 +276,32 @@ private:
     RefPtr<StringType> m_stringType;
 //    RefPtr<VectorType> m_vectorType;
     
+};
+
+class MethodEnv: public RefCounted
+{
+public:
+    MethodEnv()
+        : m_compiled(false)
+        , m_registerCount(0)
+    {
+    }
+    
+    void Compiled(GlobalData* globalData, int registerCount, std::vector<Bytecode>& bytes)
+    {
+        m_compiled = true;
+        m_globalData = globalData;
+        m_registerCount = registerCount;
+        m_bytes = bytes;
+    }
+    
+    void Run();
+
+private:
+    bool m_compiled;
+    RefPtr<GlobalData> m_globalData;
+    int m_registerCount;
+    std::vector<Bytecode> m_bytes;
 };
 
 class BytecodeGenerator
@@ -239,7 +330,7 @@ public:
     void EmitConstantInt(int value);
     void EmitConstantString(std::string value);
     
-    Property* GetProperty(std::string& name);
+    PassRef<Accessor> GetProperty(std::string& name);
     
     void CoerceInPlace(Register* reg, Type* otherType);
     
@@ -250,6 +341,8 @@ public:
     
     int GetLabel();
     void PatchConstantInt(int label, int value);
+    
+    PassRef<MethodEnv> GetMethodEnv();
 
 private:  
     void DeclareArguments(MethodNode* method);
@@ -258,6 +351,7 @@ private:
     RefPtr<GlobalData> m_globalData;
     RefPtr<Scope> m_localScope;
     RefPtr<StatementList> m_statements;
+    RefPtr<MethodEnv> m_methodEnv;
     
     std::vector<Bytecode> m_bytes;
     std::vector<RefPtr<Register> > m_registers;

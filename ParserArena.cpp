@@ -9,6 +9,7 @@
 #include "ParserArena.h"
 #include <string>
 #include <sstream>
+#include "BytecodeGenerator.h"
 
 Arena* Arena::s_active = 0;
 
@@ -25,6 +26,11 @@ Register* ArenaNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
     // should not be here
     //assert(false);
+    return 0;
+}
+
+PassRef<Accessor> ArenaNode::GetAccessor(BytecodeGenerator* generator)
+{
     return 0;
 }
 

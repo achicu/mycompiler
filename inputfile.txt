@@ -1,36 +1,22 @@
-debug "have to see 1, 0, 0";
-debug 2 <= 3;
-debug 2 >= 3;
-debug 2 == 3;
+int x = 2;
+debug x;
+x = 3;
+debug x;
+debug x++;
+debug ++x;
+debug x;
 
-debug "plus - minus";
-debug "have to see 2, 2, 1, 1, 2, 1, 1, 2";
-debug "ints";
-int a = 2;
+method test()
+{
+	debug "just called test method";
+	test2();
+}
 
-debug a;
-debug a--;
+method test2()
+{
+	debug "just called test2 method";
+}
 
-debug a;
-debug a++;
-
-debug a;
-debug --a;
-
-debug a;
-debug ++a;
-
-debug "floats";
-number b = 2;
-
-debug b;
-debug b--;
-
-debug b;
-debug b++;
-
-debug b;
-debug --b;
-
-debug b;
-debug ++b;
+test();
+test2();
+test();

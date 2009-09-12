@@ -174,10 +174,10 @@ NegationExpression:
 
 PlusPlusOrMinusMinusExpression:
   NegationExpression
-| PLUSPLUS_TOKEN LeftSide                  { $$ = new UnaryOpNode(unary_op_plusplus_prefix, $2); DBG($$, @1, @2); }
-| LeftSide PLUSPLUS_TOKEN                  { $$ = new UnaryOpNode(unary_op_plusplus_sufix, $1); DBG($$, @1, @2); }
-| MINUSMINUS_TOKEN LeftSide                { $$ = new UnaryOpNode(unary_op_minusminus_prefix, $2); DBG($$, @1, @2); }
-| LeftSide MINUSMINUS_TOKEN                { $$ = new UnaryOpNode(unary_op_minusminus_sufix, $1); DBG($$, @1, @2); }
+| PLUSPLUS_TOKEN LeftSide                  { $$ = new AssignOpNode(assign_op_plusplus_prefix, $2); DBG($$, @1, @2); }
+| LeftSide PLUSPLUS_TOKEN                  { $$ = new AssignOpNode(assign_op_plusplus_sufix, $1); DBG($$, @1, @2); }
+| MINUSMINUS_TOKEN LeftSide                { $$ = new AssignOpNode(assign_op_minusminus_prefix, $2); DBG($$, @1, @2); }
+| LeftSide MINUSMINUS_TOKEN                { $$ = new AssignOpNode(assign_op_minusminus_sufix, $1); DBG($$, @1, @2); }
 ;
 
 MultiplyExpression:
@@ -220,13 +220,12 @@ Literal:
 ;
 
 CallExpression:
-  LeftSide PARAN_START PARAN_END                  { $$ = new CallNode($1, 0); DBG($$, @1, @3); }
-| LeftSide PARAN_START ExpressionList PARAN_END   { $$ = new CallNode($1, $3); DBG($$, @1, @4); }
+  Identifier PARAN_START PARAN_END                  { $$ = new CallNode($1, 0); DBG($$, @1, @3); }
+| Identifier PARAN_START ExpressionList PARAN_END   { $$ = new CallNode($1, $3); DBG($$, @1, @4); }
 ;
 
 Expression:
-  CallExpression    { $$ = $1; DBG($$, @1, @1); }
-| AssignmentExpression
+  AssignmentExpression
 ;
 
 ExpressionStatement:
@@ -235,6 +234,7 @@ ExpressionStatement:
 
 MethodNode:
   TypeDeclaration Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = new MethodNode($1, $2, $4, $7 ); DBG($$, @1, @8); }
+| METHOD Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = new MethodNode(0, $2, $4, $7 ); DBG($$, @1, @8); }
 ;
 
 IdentifierList:

@@ -112,15 +112,26 @@ Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* d
 {
     assert(dst);
     
-    Property* property = generator->GetProperty(m_value);
-    if (!property)
+    PassRef<Accessor> accessor = generator->GetProperty(m_value);
+    if (!accessor.Ptr())
     {
         printf("Property not found %s\n", m_value.c_str());
         exit(1);
     }
 
     dst->SetIgnored();
-    return property->GetRegister();
+    return accessor->EmitLoad(generator, dst);
+}
+
+PassRef<Accessor> IdentifierNode::GetAccessor(BytecodeGenerator* generator)
+{
+    PassRef<Accessor> accessor = generator->GetProperty(m_value);
+    if (!accessor.Ptr())
+    {
+        printf("Property not found %s\n", m_value.c_str());
+        exit(1);
+    }
+    return accessor;
 }
 
 
@@ -150,6 +161,14 @@ std::string CallNode::ToString() const
     
     o << ")";
 	return o.str();
+}
+
+Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    generator->EmitBytecode(op_call_method);
+    generator->EmitConstantString(m_name->Value());
+    
+    return dst;
 }
 
 // ============ StatementNode ============
@@ -208,6 +227,37 @@ Register* BinaryOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst
     }*/
     
     return dst;
+}
+
+// ============ AssignOpNode ============
+
+std::string AssignOpNode::ToString() const
+{
+    std::ostringstream o;
+    o << "(";
+
+    o << AssignOpcodeToString(m_op) << " ";
+
+    if (m_node1.Ptr())
+        o << m_node1->ToString() << " ";
+    
+    o << ")";
+    
+    return o.str();
+}
+
+Register* AssignOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    assert(m_node1.Ptr());
+    
+    RefPtr<Accessor> accessor = m_node1->GetAccessor(generator);
+    assert(accessor.Ptr());
+
+    Type* type1 = accessor->GetType();
+    assert(type1);
+    
+    return type1->EmitAssignOpBytecode(generator, m_op, accessor.Ptr(), dst);
 }
 
 // ============ UnaryOpNode ============
@@ -274,38 +324,31 @@ std::string AssignNode::ToString() const
 
 Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
-    if (!dst)
-        dst = generator->NewTempRegister().Ptr();
-    
     assert(m_node1.Ptr());
     assert(m_node2.Ptr());
-    
-    RefPtr<Register> reg1(dst); // protect the destination pointer
-    reg1 = m_node1->EmitBytecode(generator, dst);
     
     RefPtr<Register> reg2 = generator->NewTempRegister();
     reg2 = m_node2->EmitBytecode(generator, reg2.Ptr());
     
-    if (reg1->GetType() != reg2->GetType())
+    RefPtr<Accessor> accessor( m_node1->GetAccessor(generator) );
+    assert(accessor.Ptr());
+    
+    if (accessor->GetType() != reg2->GetType())
     {
-        generator->CoerceInPlace(reg2.Ptr(), reg1->GetType());
+        generator->CoerceInPlace(reg2.Ptr(), accessor->GetType());
     }
     
-    if (reg1->GetType()->IsRefCounted())
+    assert(reg2->GetType() == accessor->GetType());
+    
+    if (accessor->GetType()->IsRefCounted())
     {
-        generator->EmitDecRef(reg1.Ptr());
+        generator->EmitIncRef(reg2.Ptr()); // increment first
+
+        RefPtr<Register> valueRegister (accessor->EmitLoad(generator, 0));
+        generator->EmitDecRef(valueRegister.Ptr());
     }
     
-    generator->EmitBytecode(op_assign);
-    generator->EmitRegister(reg1.Ptr());
-    generator->EmitRegister(reg2.Ptr());
-    
-    if (reg1->GetType()->IsRefCounted())
-    {
-        generator->EmitIncRef(reg1.Ptr());
-    }
-    
-    return reg1.Ptr();
+    return accessor->EmitSave(generator, reg2.Ptr(), dst);
 }
 
 
@@ -489,27 +532,23 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         RefPtr<Register> initializedValue = generator->NewTempRegister();
         initializedValue = m_initializer->EmitBytecode(generator, initializedValue.Ptr());
         
-        Property* property = generator->GetProperty(m_nameIdentifier->Value());
-        assert(property);
+        PassRef<Accessor> accessor = generator->GetProperty(m_nameIdentifier->Value());
+        assert(accessor.Ptr());
         
-        if (property->GetRegister()->GetType() != initializedValue->GetType())
+        if (accessor->GetType() != initializedValue->GetType())
         {
-            generator->CoerceInPlace(initializedValue.Ptr(), property->GetRegister()->GetType());
+            generator->CoerceInPlace(initializedValue.Ptr(), accessor->GetType());
         }
         
-        if (property->GetRegister()->GetType()->IsRefCounted())
+        if (accessor->GetType()->IsRefCounted())
         {
-            generator->EmitDecRef(property->GetRegister());
+            generator->EmitIncRef(initializedValue.Ptr());
+            
+            RefPtr<Register> valueRegister (accessor->EmitLoad(generator, 0));
+            generator->EmitDecRef(valueRegister.Ptr());
         }
         
-        generator->EmitBytecode(op_assign);
-        generator->EmitRegister(property->GetRegister());
-        generator->EmitRegister(initializedValue.Ptr());
-        
-        if (property->GetRegister()->GetType()->IsRefCounted())
-        {
-            generator->EmitIncRef(property->GetRegister());
-        }
+        accessor->EmitSave(generator, initializedValue.Ptr(), 0);
     }
     
     return 0;
@@ -733,15 +772,25 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
 
 // ===================
 
+const char* AssignOpcodeToString(AssignOpcode opcode)
+{
+    switch(opcode)
+    {
+        case assign_op_plusplus_prefix: return "assign_op_plusplus_prefix";
+        case assign_op_minusminus_prefix: return "assign_op_minusminus_prefix";
+        case assign_op_plusplus_sufix: return "assign_op_plusplus_sufix";
+        case assign_op_minusminus_sufix: return "assign_op_minusminus_sufix";
+    }
+    
+    assert(false);
+    return "undefined";
+};
+
 const char* UnaryOpcodeToString(UnaryOpcode opcode)
 {
     switch(opcode)
     {
         case unary_op_not: return "unary_op_not";
-        case unary_op_plusplus_prefix: return "unary_op_plusplus_prefix";
-        case unary_op_minusminus_prefix: return "unary_op_minusminus_prefix";
-        case unary_op_plusplus_sufix: return "unary_op_plusplus_sufix";
-        case unary_op_minusminus_sufix: return "unary_op_minusminus_sufix";
     }
     
     assert(false);

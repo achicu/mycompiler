@@ -86,7 +86,8 @@ int main (int argc, char * const argv[]) {
             RefPtr<GlobalData> globalData(AdoptRef(new GlobalData()));
             BytecodeGenerator generator(globalData.Ptr(), static_cast<StatementList*> (result.Ptr()));
             generator.Generate();
-            
+            RefPtr<MethodEnv> methodEnv = generator.GetMethodEnv();
+            methodEnv->Run();
         }
         fclose(inputFile);
     }

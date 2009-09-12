@@ -50,7 +50,10 @@
     MACRO(op_jmp_if_false, "ri", 2) \
     MACRO(op_jmp, "i", 1) \
     MACRO(op_int_not, "rr", 2) \
-    MACRO(op_float_not, "rr", 2)
+    MACRO(op_float_not, "rr", 2) \
+    MACRO(op_load_scope, "rii", 3) \
+    MACRO(op_save_scope, "rii", 3) \
+    MACRO(op_call_method, "s", 1) \
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,
 enum OpCode

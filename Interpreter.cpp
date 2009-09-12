@@ -274,6 +274,17 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
             R(1).asFloat = !R(2).asFloat;
         NEXT()
         
+        OPCODE(op_save_scope)
+        NEXT()
+        
+        OPCODE(op_load_scope)
+        NEXT()
+        
+        OPCODE(op_call_method)
+            MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(1).ConstantStringIndex));
+            methodEnv->Run();
+        NEXT()
+        
 finished:
         return;
     }

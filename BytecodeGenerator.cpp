@@ -11,17 +11,81 @@
 #include "Interpreter.h"
 #include "OpCodes.h"
 
-Property* Scope::GetProperty(BytecodeGenerator* generator, std::string& name) const
+Register* LocalPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Register* dst)
+{
+    return m_register.Ptr();
+}
+
+Register* LocalPropertyAccessor::EmitSave(BytecodeGenerator* generator, Register* src, Register* dst)
+{
+    if (src != m_register.Ptr())
+    {
+        generator->EmitBytecode(op_assign);
+        generator->EmitRegister(m_register.Ptr());
+        generator->EmitRegister(src);
+    }
+    return m_register.Ptr();
+}
+
+Register* ParentPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Register* dst)
+{
+    if (!dst) dst = generator->NewTempRegister().Ptr();
+    
+    generator->EmitBytecode(op_load_scope);
+    generator->EmitRegister(dst);
+    generator->EmitConstantInt(m_scopeNumber);
+    generator->EmitConstantInt(m_registerNumber);
+    
+    return dst;
+}
+
+Register* ParentPropertyAccessor::EmitSave(BytecodeGenerator* generator, Register* src, Register* dst)
+{
+    generator->EmitBytecode(op_save_scope);
+    generator->EmitRegister(src);
+    generator->EmitConstantInt(m_scopeNumber);
+    generator->EmitConstantInt(m_registerNumber);
+    
+    return src;
+}
+
+bool Scope::HasLocalProperty(std::string& name) const
+{
+    PropertyMap::const_iterator iter = m_properties.find(name);
+    return (iter != m_properties.end());
+}
+
+PassRef<Accessor> Scope::GetProperty(std::string& name) const
+{
+    PropertyMap::const_iterator iter = m_properties.find(name);
+    if (iter != m_properties.end())
+        return AdoptRef<Accessor>(new LocalPropertyAccessor((*iter).second->GetType(), (*iter).second->GetRegister()));
+    
+    if (m_parentScope.Ptr())
+    {
+        // need to get the property and set it into an accessor
+        int scopeNumber = 1;
+        Property* property = m_parentScope->LookupProperty(name, scopeNumber);
+        if (property)
+            return AdoptRef<Accessor>(new ParentPropertyAccessor( property->GetType(), scopeNumber, property->GetRegister()->Number() ));
+    }
+
+    return 0;
+}
+
+Property* Scope::LookupProperty(std::string& name, int& scopeNumber) const
 {
     PropertyMap::const_iterator iter = m_properties.find(name);
     if (iter != m_properties.end())
         return (*iter).second.Ptr();
     
-    if (generator && m_parentScope.Ptr())
+    if (m_parentScope.Ptr())
     {
-        return m_parentScope->GetProperty(generator, name);
+        ++scopeNumber;
+        
+        return m_parentScope->LookupProperty(name, scopeNumber);
     }
-
+    
     return 0;
 }
 
@@ -66,6 +130,12 @@ Register* Type::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op
     exit(1);
 }
 
+Register* Type::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst)
+{
+    // arbitrary type operators not supported, yet
+    printf("Error: trying to do %s %s\n", AssignOpcodeToString(op), Name().c_str());
+    exit(1);
+}
 
 Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
 {
@@ -119,6 +189,65 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
     return dst;
 }
 
+Register* IntType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst)
+{
+    dst->SetType(this);
+    
+    RefPtr<Register> source (accessor->EmitLoad(generator, 0));
+    RefPtr<Register> newValue;
+    
+    switch(op)
+    {
+        case assign_op_plusplus_prefix:
+            generator->EmitBytecode(op_int_plus_one);
+            generator->EmitRegister(source.Ptr());
+            dst = source.Ptr();
+        break;
+        case assign_op_plusplus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r (generator->NewTempRegister());
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(source.Ptr());
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_int_plus_one);
+            generator->EmitRegister(source.Ptr());
+        }
+        break;
+        case assign_op_minusminus_prefix:
+            generator->EmitBytecode(op_int_minus_one);
+            generator->EmitRegister(source.Ptr());
+            dst = source.Ptr();
+        break;
+        case assign_op_minusminus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r( generator->NewTempRegister() );
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(source.Ptr());
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_int_minus_one);
+            generator->EmitRegister(source.Ptr());
+        }
+        break;
+        default:
+            printf(" assign %s operation not supported on ints\n", AssignOpcodeToString(op));
+            exit(1);
+    }
+    
+    accessor->EmitSave(generator, source.Ptr(), 0)->SetIgnored();
+    
+    return dst;
+}
+
 Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst)
 {
     dst->SetType(this);
@@ -130,46 +259,6 @@ Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode
             generator->EmitRegister(dst);
             generator->EmitRegister(reg1);
     
-        break;
-        case unary_op_plusplus_prefix:
-            generator->EmitBytecode(op_int_plus_one);
-            generator->EmitRegister(reg1);
-            dst = reg1;
-        break;
-        case unary_op_plusplus_sufix:
-        {
-            // let the user get the old value
-            RefPtr<Register> r (generator->NewTempRegister());
-            r->SetType(this);
-            
-            generator->EmitBytecode(op_assign);
-            generator->EmitRegister(r.Ptr());
-            generator->EmitRegister(reg1);
-            dst = r.Ptr();
-            
-            generator->EmitBytecode(op_int_plus_one);
-            generator->EmitRegister(reg1);
-        }
-        break;
-        case unary_op_minusminus_prefix:
-            generator->EmitBytecode(op_int_minus_one);
-            generator->EmitRegister(reg1);
-            dst = reg1;
-        break;
-        case unary_op_minusminus_sufix:
-        {
-            // let the user get the old value
-            RefPtr<Register> r( generator->NewTempRegister() );
-            r->SetType(this);
-            
-            generator->EmitBytecode(op_assign);
-            generator->EmitRegister(r.Ptr());
-            generator->EmitRegister(reg1);
-            dst = r.Ptr();
-            
-            generator->EmitBytecode(op_int_minus_one);
-            generator->EmitRegister(reg1);
-        }
         break;
         default:
             printf(" unary %s operation not supported on ints\n", UnaryOpcodeToString(op));
@@ -237,6 +326,65 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
     return dst;
 }
 
+Register* FloatType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst)
+{
+    dst->SetType(this);
+    
+    RefPtr<Register> source (accessor->EmitLoad(generator, 0));
+    RefPtr<Register> newValue;
+    
+    switch(op)
+    {
+        case assign_op_plusplus_prefix:
+            generator->EmitBytecode(op_float_plus_one);
+            generator->EmitRegister(source.Ptr());
+            dst = source.Ptr();
+        break;
+        case assign_op_plusplus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r (generator->NewTempRegister());
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(source.Ptr());
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_float_plus_one);
+            generator->EmitRegister(source.Ptr());
+        }
+        break;
+        case assign_op_minusminus_prefix:
+            generator->EmitBytecode(op_float_minus_one);
+            generator->EmitRegister(source.Ptr());
+            dst = source.Ptr();
+        break;
+        case assign_op_minusminus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r( generator->NewTempRegister() );
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(source.Ptr());
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_float_minus_one);
+            generator->EmitRegister(source.Ptr());
+        }
+        break;
+        default:
+            printf(" assign %s operation not supported on ints\n", AssignOpcodeToString(op));
+            exit(1);
+    }
+    
+    accessor->EmitSave(generator, source.Ptr(), 0)->SetIgnored();
+    
+    return dst;
+}
+
 Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst)
 {
     dst->SetType(this);
@@ -248,46 +396,6 @@ Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpco
             generator->EmitRegister(dst);
             generator->EmitRegister(reg1);
     
-        break;
-        case unary_op_plusplus_prefix:
-            generator->EmitBytecode(op_float_plus_one);
-            generator->EmitRegister(reg1);
-            dst = reg1;
-        break;
-        case unary_op_plusplus_sufix:
-        {
-            // let the user get the old value
-            RefPtr<Register> r (generator->NewTempRegister());
-            r->SetType(this);
-            
-            generator->EmitBytecode(op_assign);
-            generator->EmitRegister(r.Ptr());
-            generator->EmitRegister(reg1);
-            dst = r.Ptr();
-            
-            generator->EmitBytecode(op_float_plus_one);
-            generator->EmitRegister(reg1);
-        }
-        break;
-        case unary_op_minusminus_prefix:
-            generator->EmitBytecode(op_float_minus_one);
-            generator->EmitRegister(reg1);
-            dst = reg1;
-        break;
-        case unary_op_minusminus_sufix:
-        {
-            // let the user get the old value
-            RefPtr<Register> r( generator->NewTempRegister() );
-            r->SetType(this);
-            
-            generator->EmitBytecode(op_assign);
-            generator->EmitRegister(r.Ptr());
-            generator->EmitRegister(reg1);
-            dst = r.Ptr();
-            
-            generator->EmitBytecode(op_float_minus_one);
-            generator->EmitRegister(reg1);
-        }
         break;
         default:
             printf(" unary %s operation not supported on floats\n", UnaryOpcodeToString(op));
@@ -360,6 +468,21 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
     return type.Ptr();
 }
 
+MethodEnv* GlobalData::GetMethod(std::string name)
+{
+    MethodList::const_iterator iter = m_methodList.find( name );
+    if (iter != m_methodList.end())
+    {
+        return (*iter).second.Ptr();
+    }
+    
+    RefPtr<MethodEnv> method (AdoptRef( new MethodEnv() ));
+    
+    m_methodList[name] = method;
+    
+    return method.Ptr();
+}
+
 int GlobalData::GetConstantFloatIndex(double d)
 {
     for (int i=0; i<m_floatConstants.size(); ++i)
@@ -399,6 +522,8 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
 {
     assert(method);
     
+    m_methodEnv = globalData->GetMethod(method->Identifier()->Value());
+    
     m_localScope.AdoptRef(new Scope(parentScope));
     
     DeclareArguments(method);
@@ -430,6 +555,9 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
     , m_statements(statements)
     , m_maxRegisterCount(0)
 {
+    static std::string globalMethodName("$main");
+    m_methodEnv = globalData->GetMethod(globalMethodName);
+    
     m_localScope.AdoptRef(new Scope(0));
     m_calleeRegisters = 0;
     
@@ -443,13 +571,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
         if (statement == 0)
             continue;
         
-        if (statement->IsMethodNode())
-        {
-            MethodNode* methodNode = static_cast<MethodNode*>(statement);
-            (void) methodNode;
-            // printf( " method : %s\n", methodNode->ToString().c_str());
-        }
-        else if (statement->IsStructNode())
+        if (statement->IsStructNode())
         {
             StructNode* structNode = static_cast<StructNode*>(statement);
             (void) structNode;
@@ -461,6 +583,21 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
             DeclareProperty(varStatement->Identifier()->Value(), m_globalData->GetTypeOf(varStatement->GetTypeNode()));
         }
     }
+
+    for (int i=0; i<statements->size(); ++i)
+    {
+        StatementNode* statement = statements->at(i).Ptr();
+        if (statement == 0)
+            continue;
+        
+        if (statement->IsMethodNode())
+        {
+            MethodNode* methodNode = static_cast<MethodNode*>(statement);
+            BytecodeGenerator generator(globalData, m_localScope.Ptr(), methodNode);
+            generator.Generate();
+        }
+    }
+        
 }
 
 PassRef<Register> BytecodeGenerator::NewTempRegister()
@@ -514,14 +651,14 @@ void BytecodeGenerator::DeclareArguments(MethodNode* method)
     }
 }
 
-Property* BytecodeGenerator::GetProperty(std::string& name)
+PassRef<Accessor> BytecodeGenerator::GetProperty(std::string& name)
 {
-    return m_localScope->GetProperty(this, name);
+    return m_localScope->GetProperty(name);
 }
 
 void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
 {
-    if (m_localScope->GetProperty(0, name))
+    if (m_localScope->HasLocalProperty(name))
     {
         printf("property name redclartion %s\n", name.c_str());
         exit(1);
@@ -578,9 +715,14 @@ void BytecodeGenerator::Generate()
             EmitDecRef(reg);
     }
 
-    
+    m_methodEnv->Compiled(m_globalData.Ptr(), m_maxRegisterCount, m_bytes);
+
     Disassemble(m_globalData.Ptr(), &m_bytes);
-    Interpret(m_globalData.Ptr(), m_maxRegisterCount, &m_bytes);
+}
+
+PassRef<MethodEnv> BytecodeGenerator::GetMethodEnv()
+{
+    return m_methodEnv.Ptr();
 }
 
 void BytecodeGenerator::EmitBytecode(int bytecode)
@@ -705,4 +847,12 @@ void BytecodeGenerator::PatchConstantInt(int label, int value)
 {
     assert(label < m_bytes.size());
     m_bytes.at(label).ConstantInt = value;
+}
+
+void MethodEnv::Run()
+{
+    if (!m_compiled)
+        printf("the method is not compiled \n");
+    
+    Interpret(m_globalData.Ptr(), m_registerCount, &m_bytes);
 }

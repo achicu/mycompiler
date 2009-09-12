@@ -16,6 +16,7 @@
 
 class BytecodeGenerator;
 class Register;
+class Accessor;
 
 class ArenaNode: public RefCounted
 {
@@ -39,6 +40,7 @@ public:
     int End() const { return m_end; }
 
     virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    virtual PassRef<Accessor> GetAccessor(BytecodeGenerator* generator);
 
 private:
     int m_line;
