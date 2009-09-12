@@ -1,0 +1,36 @@
+debug "have to see 1, 0, 0";
+debug 2 <= 3;
+debug 2 >= 3;
+debug 2 == 3;
+
+debug "plus - minus";
+debug "have to see 2, 2, 1, 1, 2, 1, 1, 2";
+debug "ints";
+int a = 2;
+
+debug a;
+debug a--;
+
+debug a;
+debug a++;
+
+debug a;
+debug --a;
+
+debug a;
+debug ++a;
+
+debug "floats";
+number b = 2;
+
+debug b;
+debug b--;
+
+debug b;
+debug b++;
+
+debug b;
+debug --b;
+
+debug b;
+debug ++b;
