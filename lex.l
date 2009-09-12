@@ -49,6 +49,8 @@ extends                 return EXTENDS;
 method                  return METHOD;
 return                  return RETURN_TOKEN;
 debug                   return DEBUG_TOKEN;
+if                      return IF_TOKEN;
+else                    return ELSE_TOKEN;
 [0-9]+\.[0-9]+          return FLOAT_NUMBER;
 [0-9]+                  return INTEGER_NUMBER;
 [a-zA-Z][a-zA-Z0-9]*    return IDENTIFIER;

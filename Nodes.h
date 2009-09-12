@@ -355,4 +355,26 @@ private:
     RefPtr<ArenaNode> m_expression;
 };
 
+class IfStatement: public StatementNode
+{
+public:
+    IfStatement(ArenaNode* expression, StatementList* ifBranch, StatementList* elseBranch)
+        : m_expression(expression)
+        , m_ifBranch(ifBranch)
+        , m_elseBranch(elseBranch)
+    {
+    }
+
+    virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
+private:
+    RefPtr<ArenaNode> m_expression;
+    RefPtr<StatementList> m_ifBranch;
+    RefPtr<StatementList> m_elseBranch;
+};
+
+
+
 #endif // NODES_H

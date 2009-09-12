@@ -116,6 +116,7 @@ Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* d
     if (!property)
     {
         printf("Property not found %s\n", m_value.c_str());
+        exit(1);
     }
 
     dst->SetIgnored();
@@ -546,3 +547,75 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     
     return dst;
 }
+
+// ============ IfStatement ============
+
+std::string IfStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[If (";
+
+    assert (m_expression.Ptr());
+    o << m_expression->ToString() << ") ";
+        
+    o << "{ ";
+
+    assert (m_ifBranch.Ptr());
+    o << m_ifBranch->ToString();
+    
+    o << " }";
+    
+    if (m_elseBranch.Ptr())
+    {
+        o << " else { ";
+        o << m_elseBranch->ToString();
+        o << " }";
+    }
+    
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    RefPtr<Register> expressionReg = dst ? dst : generator->NewTempRegister().Ptr();
+    
+    assert(m_expression.Ptr());
+    expressionReg = m_expression->EmitBytecode(generator, expressionReg.Ptr());
+    
+    if (expressionReg->GetType() != generator->GetGlobalData()->GetIntType())
+    {
+        generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
+    }
+    
+    generator->EmitBytecode(op_jmp_if_true);
+    generator->EmitRegister(expressionReg.Ptr());
+    int patchJumpLabel = generator->GetLabel();
+    generator->EmitConstantInt(0);
+    
+    assert(m_ifBranch.Ptr());
+    
+    for (int i=0; i<m_ifBranch->size(); i++)
+    {
+        generator->EmitNode(m_ifBranch->at(i).Ptr());
+    }
+    
+    // patch the jump
+    int jumpLabel = generator->GetLabel();
+    generator->PatchConstantInt(patchJumpLabel, jumpLabel);
+    
+    if (m_elseBranch.Ptr())
+    {
+        for (int i=0; i<m_elseBranch->size(); i++)
+        {
+            generator->EmitNode(m_elseBranch->at(i).Ptr());
+        }
+    }
+    
+    return 0;
+}
+
+

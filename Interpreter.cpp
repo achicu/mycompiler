@@ -43,8 +43,7 @@ public:
     RegisterBook(int size)
     {
         m_block = new RegisterValues[size];
-        for (int i=0; i<size; i++)
-            m_block[i].asInt = 0;
+        memset(m_block, 0, size*sizeof(m_block[0]));
     }
     
     ~RegisterBook()
@@ -83,14 +82,15 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
         if (vPC >= buffer->size()) goto finished; \
         assert(buffer->at(vPC).Code < op_last); \
         meta = &bytecodeList[buffer->at(vPC).Code]; \
-        printf("%s\n", meta->name); \
+        /*printf("%s\n", meta->name);*/ \
         byte = buffer->at(vPC); \
         vPCNext += meta->length; \
         goto *meta->label; }
     
     #define OPCODE(opcode) OPCODE_##opcode: {
-    #define NEXT() for (int z=0; z<registersCount; ++z) printf("register: %d\t\tasInt:%d\t\t\t\tasFloat:%lf\t\t\tasReference:%p\n", z, registers[z].asInt, registers[z].asFloat, registers[z].asReference); \
-                   GOTONEXT() }
+    #define NEXT() \
+        /* for (int z=0; z<registersCount; ++z) printf("register: %d\t\tasInt:%d\t\t\t\tasFloat:%lf\t\t\tasReference:%p\n", z, registers[z].asInt, registers[z].asFloat, registers[z].asReference);*/ \
+        GOTONEXT() }
     
     #define V(j) (buffer->at(vPC + j))
     #define RAT(j) (registers[j])
@@ -209,6 +209,12 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
         NEXT()
         OPCODE(op_init_ref)
             R(1).asReference = 0;
+        NEXT()
+        OPCODE(op_jmp_if_true)
+            if (!R(1).asInt)
+            {
+                vPCNext = V(2).ConstantInt;
+            }
         NEXT()
         
 finished:

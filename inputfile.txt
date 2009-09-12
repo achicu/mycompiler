@@ -9,3 +9,23 @@ int t2 = "10";
 debug t2;
 number t3 = "10.77";
 debug t3;
+
+number a = 0 - 1;
+if (a + 1)
+{
+	debug "a + 1";
+}
+
+if (1)
+{
+	debug "1";
+}
+
+if (0)
+{
+	debug "0";
+}
+else
+{
+	debug "else 0";
+}

@@ -35,6 +35,7 @@ void sendToken(char* buff, int size)
 		
 int main (int argc, char * const argv[]) {
     inputFile = fopen("../../inputfile.txt", "rb");
+    //inputFile = fopen("/www/git/mycompiler/inputfile.txt", "rb");
     if (inputFile)
     {
         RefPtr<ArenaNode> result;

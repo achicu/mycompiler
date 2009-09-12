@@ -524,3 +524,13 @@ void BytecodeGenerator::EmitDecRef(Register* reg)
     EmitRegister(reg);
 }
 
+int BytecodeGenerator::GetLabel()
+{
+    return m_bytes.size();
+}
+
+void BytecodeGenerator::PatchConstantInt(int label, int value)
+{
+    assert(label < m_bytes.size());
+    m_bytes.at(label).ConstantInt = value;
+}

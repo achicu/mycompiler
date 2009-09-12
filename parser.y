@@ -29,7 +29,7 @@ extern char *yytext;
 
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN
-%token RETURN_TOKEN EXTENDS STRUCT
+%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN
 
 %left MINUS PLUS
 %left MULTIPLY DIVIDE
@@ -52,9 +52,9 @@ extern char *yytext;
 %type <identifierNode> Identifier
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
-%type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement AssignmentStatement 
-%type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement
-%type <statementList> GlobalStatementList InMethodStatementList InStructStatementList
+%type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement AssignmentStatement InBlockStatement
+%type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement IfStatement
+%type <statementList> GlobalStatementList InMethodStatementList InStructStatementList InBlockStatementList BlockOrStatement
 %type <identifierList> IdentifierList
 %type <typeNodeList> TypeDeclarationList
 %type <typeNode> TypeDeclaration
@@ -90,15 +90,15 @@ GlobalStatementList:
 | GlobalStatementList GlobalStatement   { $$ = $1; $$->push_back($2); DBG($$, @1, @2); }
 ;
 
+InBlockStatementList:
+  GlobalStatement     { $$ = new StatementList(); $$->push_back($1); DBG($$, @1, @1); }
+| InBlockStatementList GlobalStatement   { $$ = $1; $$->push_back($2); DBG($$, @1, @2); }
+;
+
 GlobalStatement:
-  EmptyStatement
-| StructNode
-| AssignmentStatement
+  StructNode
 | MethodNode
-| ExpressionStatement
-| VariableDeclarationStatement
-| ReturnStatement
-| DebugStatement
+| InMethodStatement
 ;
 
 InStructStatement:
@@ -107,12 +107,28 @@ InStructStatement:
 ;
 
 InMethodStatement:
+  InBlockStatement
+| VariableDeclarationStatement
+;
+
+InBlockStatement:
   EmptyStatement
 | AssignmentStatement
 | ExpressionStatement
-| VariableDeclarationStatement
 | ReturnStatement
 | DebugStatement
+| IfStatement
+;
+
+BlockOrStatement:
+  InBlockStatement                                { $$ = new StatementList(); $$->push_back($1); DBG($$, @1, @1); } 
+| BRACKET_START BRACKET_END                       { $$ = new StatementList(); DBG($$, @1, @1); }
+| BRACKET_START InBlockStatementList BRACKET_END  { $$ = $2; DBG($$, @1, @3); }
+;
+
+IfStatement:
+  IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement ELSE_TOKEN BlockOrStatement { $$ = new IfStatement($3, $5, $7); DBG($$, @1, @7); }
+| IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement { $$ = new IfStatement($3, $5, 0); DBG($$, @1, @5); }
 ;
 
 DebugStatement:
@@ -197,7 +213,6 @@ ArgumentDeclaration:
 
 ArgumentDeclarationList:
  /* emtpy */  { $$ = 0; }
-|
 | ArgumentDeclaration                                 { $$ = new ArgumentNodeList(); $$->push_back($1); DBG($$, @1, @1); }
 | ArgumentDeclarationList COMMA ArgumentDeclaration   { $$ = $1; $$->push_back($3); DBG($$, @1, @3); }
 ;

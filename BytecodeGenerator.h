@@ -238,6 +238,9 @@ public:
     
     void EmitIncRef(Register* reg);
     void EmitDecRef(Register* reg);
+    
+    int GetLabel();
+    void PatchConstantInt(int label, int value);
 
 private:  
     void DeclareArguments(MethodNode* method);
