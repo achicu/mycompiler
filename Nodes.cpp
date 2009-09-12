@@ -200,6 +200,48 @@ Register* BinaryOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst
     
     dst = type1->EmitBinaryOpBytecode(generator, type2, m_op, reg1.Ptr(), reg2.Ptr(), dst);
 
+    // this will always generate a new refernce 
+    // no need to increment ref here
+    /*if (dst->GetType()->IsRefCounted())
+    {
+        generator->EmitIncRef(dst);
+    }*/
+    
+    return dst;
+}
+
+// ============ UnaryOpNode ============
+
+std::string UnaryOpNode::ToString() const
+{
+    std::ostringstream o;
+    o << "(";
+
+    o << m_op << " ";
+
+    if (m_node1.Ptr())
+        o << m_node1->ToString() << " ";
+    
+    o << ")";
+    
+    return o.str();
+}
+
+Register* UnaryOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    assert(m_node1.Ptr());
+    
+    RefPtr<Register> reg1 = generator->NewTempRegister();
+    reg1 = m_node1->EmitBytecode(generator, reg1.Ptr());
+        
+    Type* type1 = reg1->GetType();
+    assert(type1);
+    
+    dst = type1->EmitUnaryOpBytecode(generator, m_op, reg1.Ptr(), dst);
+
+    // this will always generate a new refernce
+    // no need to increment ref here    
     /*if (dst->GetType()->IsRefCounted())
     {
         generator->EmitIncRef(dst);

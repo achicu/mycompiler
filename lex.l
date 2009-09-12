@@ -56,6 +56,7 @@ else                    return ELSE_TOKEN;
 [a-zA-Z][a-zA-Z0-9]*    return IDENTIFIER;
 \"([^\"]|\\\")*\"       return STRING_TOKEN;
 \'([^\']|\\\')*\'       return STRING_TOKEN;
+!                       return NOT;
 =                       return EQUALS;
 \*                      return MULTIPLY;
 \/                      return DIVIDE;

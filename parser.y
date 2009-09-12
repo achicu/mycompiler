@@ -29,7 +29,7 @@ extern char *yytext;
 
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN
-%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN
+%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT
 
 %left MINUS PLUS
 %left MULTIPLY DIVIDE
@@ -48,7 +48,7 @@ extern char *yytext;
     ArgumentNode* argumentNode;
 }
 
-%type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide
+%type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression
 %type <identifierNode> Identifier
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
@@ -159,10 +159,15 @@ LeftSide:
 | LeftSide DOT Identifier { $$ = new DotNode($1, $3); DBG($$, @1, @3); }
 ;
 
-MultiplyExpression:
+NegationExpression:
   Literal
-| MultiplyExpression MULTIPLY Literal    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
-| MultiplyExpression DIVIDE Literal      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
+| NOT NegationExpression                            { $$ = new UnaryOpNode('!', $2); DBG($$, @1, @2); }
+;
+
+MultiplyExpression:
+  NegationExpression
+| MultiplyExpression MULTIPLY NegationExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression DIVIDE NegationExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
 ;
 
 PlusExpression:

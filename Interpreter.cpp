@@ -216,6 +216,12 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
                 vPCNext = V(2).ConstantInt;
             }
         NEXT()
+        OPCODE(op_int_not)
+            R(1).asInt = !R(2).asInt;
+        NEXT()
+        OPCODE(op_float_not)
+            R(1).asFloat = !R(2).asFloat;
+        NEXT()
         
 finished:
         return;

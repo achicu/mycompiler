@@ -59,6 +59,14 @@ Register* Type::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, 
     exit(1);
 }
 
+Register* Type::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Register* reg1, Register* dst)
+{
+    // arbitrary type operators not supported, yet
+    printf("Error: trying to do %c %s\n", op, Name().c_str());
+    exit(1);
+}
+
+
 Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
 {
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
@@ -96,6 +104,27 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
     return dst;
 }
 
+Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Register* reg1, Register* dst)
+{
+    dst->SetType(this);
+    
+    switch(op)
+    {
+        case '!':
+            generator->EmitBytecode(op_int_not);
+        break;
+        default:
+            printf(" unary %c operation not supported on ints\n", op);
+            assert(false);
+    }
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(reg1);
+    
+    return dst;
+}
+
+
 Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
 {
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
@@ -129,6 +158,26 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
     generator->EmitRegister(dst);
     generator->EmitRegister(reg1);
     generator->EmitRegister(reg2);
+    
+    return dst;
+}
+
+Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Register* reg1, Register* dst)
+{
+    dst->SetType(this);
+    
+    switch(op)
+    {
+        case '!':
+            generator->EmitBytecode(op_float_not);
+        break;
+        default:
+            printf(" unary %c operation not supported on ints\n", op);
+            assert(false);
+    }
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(reg1);
     
     return dst;
 }

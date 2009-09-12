@@ -63,6 +63,7 @@ public:
     virtual bool IsRefCounted() const { return false; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char m_op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, char m_op, Register* reg1, Register* dst);
 
 private:
     std::string m_name;
@@ -96,6 +97,8 @@ public:
     virtual int GetPriority() const { return 0; }
         
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, char m_op, Register* reg1, Register* dst);
+    
 };
 
 class FloatType: public BuiltinType
@@ -109,6 +112,8 @@ public:
     virtual int GetPriority() const { return 1; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
+    virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, char m_op, Register* reg1, Register* dst);
+
 };
 
 class StringType: public BuiltinType
@@ -123,6 +128,7 @@ public:
     virtual int GetPriority() const { return 2; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
+
 };
 
 class Property: public RefCounted

@@ -140,6 +140,24 @@ public:
     virtual bool IsVarStatement() const { return false; }
 };
 
+class UnaryOpNode: public ArenaNode
+{
+public:
+    UnaryOpNode(char op, ArenaNode* node1)
+        : m_op(op)
+        , m_node1(node1)
+    {
+    }
+
+    virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+
+private:
+    char m_op;
+    RefPtr<ArenaNode> m_node1;
+};
+
 class BinaryOpNode: public ArenaNode
 {
 public:
