@@ -633,7 +633,9 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
     }
     
-    generator->EmitBytecode(op_jmp_if_true);
+    generator->CleanupRegisters();
+    
+    generator->EmitBytecode(op_jmp_if_false);
     generator->EmitRegister(expressionReg.Ptr());
     int patchJumpLabel = generator->GetLabel();
     generator->EmitConstantInt(0);
@@ -691,6 +693,8 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
 {
     RefPtr<Register> expressionReg = dst ? dst : generator->NewTempRegister().Ptr();
     
+    generator->CleanupRegisters();
+    
     int startLabel = generator->GetLabel();
     
     assert(m_expression.Ptr());
@@ -700,6 +704,8 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     {
         generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
     }
+    
+    generator->CleanupRegisters();
     
     generator->EmitBytecode(op_jmp_if_false);
     generator->EmitRegister(expressionReg.Ptr());

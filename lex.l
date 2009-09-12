@@ -58,6 +58,7 @@ while                   return WHILE_TOKEN;
 \"([^\"]|\\\")*\"       return STRING_TOKEN;
 \'([^\']|\\\')*\'       return STRING_TOKEN;
 !                       return NOT;
+==                      return D_EQUALS;
 =                       return EQUALS;
 \*                      return MULTIPLY;
 \/                      return DIVIDE;

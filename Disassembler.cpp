@@ -38,7 +38,7 @@ void Disassemble(GlobalData* globalData, std::vector<Bytecode>* buffer)
     {
         assert(buffer->at(i).Code < op_last);
         BytecodeMetaData* meta = &bytecodeList[buffer->at(i).Code];
-        printf(" %s", meta->name);
+        printf("%d:\t%s", i, meta->name);
         
         const char* structure = meta->structure; 
         while(*structure)

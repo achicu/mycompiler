@@ -135,6 +135,15 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
             else
                 R(1).asInt = 0;
         NEXT()
+        OPCODE(op_int_less)
+            R(1).asInt = (R(2).asInt < R(3).asInt) ? 1 : 0;
+        NEXT()
+        OPCODE(op_int_more)
+            R(1).asInt = (R(2).asInt > R(3).asInt) ? 1 : 0;
+        NEXT()
+        OPCODE(op_int_equals)
+            R(1).asInt = (R(2).asInt == R(3).asInt) ? 1 : 0;
+        NEXT()
         OPCODE(op_float_plus)
             R(1).asFloat = R(2).asFloat + R(3).asFloat;
         NEXT()
@@ -149,6 +158,15 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
                 R(1).asFloat = R(2).asFloat / R(3).asFloat;
             else
                 R(1).asFloat = 0;
+        NEXT()
+        OPCODE(op_float_less)
+            R(1).asInt = (R(2).asFloat < R(3).asFloat) ? 1 : 0;
+        NEXT()
+        OPCODE(op_float_more)
+            R(1).asInt = (R(2).asFloat > R(3).asFloat) ? 1 : 0;
+        NEXT()
+        OPCODE(op_float_equals)
+            R(1).asInt = (R(2).asFloat == R(3).asFloat) ? 1 : 0;
         NEXT()
         OPCODE(op_string_plus)
             R(1).asReference = new RefString(static_cast<RefString*>(R(2).asReference)->Value + static_cast<RefString*>(R(3).asReference)->Value);
@@ -185,13 +203,13 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
             R(1) = R(2);
         NEXT()
         OPCODE(op_debug_int)
-            printf("debug %d\n", R(1).asInt);
+            printf("%d\n", R(1).asInt);
         NEXT()
         OPCODE(op_debug_float)
-            printf("debug %lf\n", R(1).asFloat);
+            printf("%lf\n", R(1).asFloat);
         NEXT()
         OPCODE(op_debug_string)
-            printf("debug %s\n", static_cast<RefString*>(R(1).asReference)->Value.c_str());
+            printf("%s\n", static_cast<RefString*>(R(1).asReference)->Value.c_str());
         NEXT()
         OPCODE(op_inc_ref)
             RefCounted* ref = R(1).asReference;
@@ -211,13 +229,13 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
             R(1).asReference = 0;
         NEXT()
         OPCODE(op_jmp_if_true)
-            if (!R(1).asInt)
+            if (R(1).asInt)
             {
                 vPCNext = V(2).ConstantInt;
             }
         NEXT()
         OPCODE(op_jmp_if_false)
-            if (R(1).asInt)
+            if (!R(1).asInt)
             {
                 vPCNext = V(2).ConstantInt;
             }

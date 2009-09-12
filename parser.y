@@ -29,7 +29,7 @@ extern char *yytext;
 
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN
-%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN
+%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN D_EQUALS
 
 %left MINUS PLUS
 %left MULTIPLY DIVIDE
@@ -48,7 +48,7 @@ extern char *yytext;
     ArgumentNode* argumentNode;
 }
 
-%type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression
+%type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression CompareExpression
 %type <identifierNode> Identifier
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
@@ -170,10 +170,17 @@ NegationExpression:
 | NOT NegationExpression                            { $$ = new UnaryOpNode('!', $2); DBG($$, @1, @2); }
 ;
 
-MultiplyExpression:
+CompareExpression:
   NegationExpression
-| MultiplyExpression MULTIPLY NegationExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
-| MultiplyExpression DIVIDE NegationExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
+| CompareExpression LESS NegationExpression         { $$ = new BinaryOpNode('<', $1, $3); DBG($$, @1, @3); }
+| CompareExpression MORE NegationExpression         { $$ = new BinaryOpNode('>', $1, $3); DBG($$, @1, @3); }
+| CompareExpression D_EQUALS NegationExpression     { $$ = new BinaryOpNode('=', $1, $3); DBG($$, @1, @3); }
+;
+
+MultiplyExpression:
+  CompareExpression
+| MultiplyExpression MULTIPLY CompareExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression DIVIDE CompareExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
 ;
 
 PlusExpression:

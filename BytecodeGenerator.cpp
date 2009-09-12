@@ -92,9 +92,18 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
         case '/':
             generator->EmitBytecode(op_int_divide);
         break;
+        case '<':
+            generator->EmitBytecode(op_int_less);
+        break;
+        case '>':
+            generator->EmitBytecode(op_int_more);
+        break;
+        case '=':
+            generator->EmitBytecode(op_int_equals);
+        break;
         default:
             printf(" %c operation not supported on ints\n", op);
-            assert(false);
+            exit(1);
     }
     
     generator->EmitRegister(dst);
@@ -115,7 +124,7 @@ Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, Re
         break;
         default:
             printf(" unary %c operation not supported on ints\n", op);
-            assert(false);
+            exit(1);
     }
     
     generator->EmitRegister(dst);
@@ -150,9 +159,21 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
         case '/':
             generator->EmitBytecode(op_float_divide);
         break;
+        case '<':
+            generator->EmitBytecode(op_float_less);
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+        break;
+        case '>':
+            generator->EmitBytecode(op_float_more);
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+        break;
+        case '=':
+            generator->EmitBytecode(op_float_equals);
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+        break;
         default:
             printf(" %c operation not supported on floats\n", op);
-            assert(false);
+            exit(1);
     }
     
     generator->EmitRegister(dst);
@@ -173,7 +194,7 @@ Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, char op, 
         break;
         default:
             printf(" unary %c operation not supported on ints\n", op);
-            assert(false);
+            exit(1);
     }
     
     generator->EmitRegister(dst);
@@ -200,7 +221,7 @@ Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* t
         break;
         default:
             printf(" %c operation not supported on strings\n", op);
-            assert(false);
+            exit(1);
     }
     
     generator->EmitRegister(dst);
@@ -417,8 +438,11 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
     reg->SetType(type);
     property->SetRegister(reg.Ptr());
     
-    EmitBytecode(op_init_ref);
-    EmitRegister(reg.Ptr());
+    if (type->IsRefCounted())
+    {
+        EmitBytecode(op_init_ref);
+        EmitRegister(reg.Ptr());
+    }
     
     printf("Variable %s has register %d\n", name.c_str(), property->GetRegister()->Number());
 }

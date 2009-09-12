@@ -14,10 +14,16 @@
     MACRO(op_int_minus, "rrr", 3) \
     MACRO(op_int_multiply, "rrr", 3) \
     MACRO(op_int_divide, "rrr", 3) \
+    MACRO(op_int_less, "rrr", 3) \
+    MACRO(op_int_more, "rrr", 3) \
+    MACRO(op_int_equals, "rrr", 3) \
     MACRO(op_float_plus, "rrr", 3) \
     MACRO(op_float_minus, "rrr", 3) \
     MACRO(op_float_multiply, "rrr", 3) \
     MACRO(op_float_divide, "rrr", 3) \
+    MACRO(op_float_less, "rrr", 3) \
+    MACRO(op_float_more, "rrr", 3) \
+    MACRO(op_float_equals, "rrr", 3) \
     MACRO(op_string_plus, "rrr", 3) \
     MACRO(op_coerce_int_float, "r", 1) \
     MACRO(op_coerce_int_string, "r", 1) \
