@@ -33,6 +33,8 @@
     MACRO(op_dec_ref, "r", 1) \
     MACRO(op_init_ref, "r", 1) \
     MACRO(op_jmp_if_true, "ri", 2) \
+    MACRO(op_jmp_if_false, "ri", 2) \
+    MACRO(op_jmp, "i", 1) \
     MACRO(op_int_not, "rr", 2) \
     MACRO(op_float_not, "rr", 2)
 

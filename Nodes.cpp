@@ -663,4 +663,64 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     return 0;
 }
 
+// ============ WhileStatement ============
+
+std::string WhileStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[While (";
+
+    assert (m_expression.Ptr());
+    o << m_expression->ToString() << ") ";
+        
+    o << "{ ";
+
+    assert (m_whileBranch.Ptr());
+    o << m_whileBranch->ToString();
+    
+    o << " }";
+        
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    RefPtr<Register> expressionReg = dst ? dst : generator->NewTempRegister().Ptr();
+    
+    int startLabel = generator->GetLabel();
+    
+    assert(m_expression.Ptr());
+    expressionReg = m_expression->EmitBytecode(generator, expressionReg.Ptr());
+    
+    if (expressionReg->GetType() != generator->GetGlobalData()->GetIntType())
+    {
+        generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
+    }
+    
+    generator->EmitBytecode(op_jmp_if_false);
+    generator->EmitRegister(expressionReg.Ptr());
+    int patchJumpLabel = generator->GetLabel();
+    generator->EmitConstantInt(0);
+    
+    assert(m_whileBranch.Ptr());
+    for (int i=0; i<m_whileBranch->size(); i++)
+    {
+        generator->EmitNode(m_whileBranch->at(i).Ptr());
+    }
+    
+    generator->CleanupRegisters();
+    
+    generator->EmitBytecode(op_jmp);
+    generator->EmitConstantInt(startLabel);
+    
+    // patch the jump
+    int jumpLabel = generator->GetLabel();
+    generator->PatchConstantInt(patchJumpLabel, jumpLabel);
+    
+    return 0;
+}
 

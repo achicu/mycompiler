@@ -393,6 +393,23 @@ private:
     RefPtr<StatementList> m_elseBranch;
 };
 
+class WhileStatement: public StatementNode
+{
+public:
+    WhileStatement(ArenaNode* expression, StatementList* whileBranch)
+        : m_expression(expression)
+        , m_whileBranch(whileBranch)
+    {
+    }
+
+    virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
+private:
+    RefPtr<ArenaNode> m_expression;
+    RefPtr<StatementList> m_whileBranch;
+};
 
 
 #endif // NODES_H

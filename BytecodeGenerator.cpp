@@ -409,7 +409,7 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
     if (m_localScope->GetProperty(0, name))
     {
         printf("property name redclartion %s\n", name.c_str());
-        return;
+        exit(1);
     }
     
     Property* property = m_localScope->PutProperty(name, type);

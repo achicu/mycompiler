@@ -29,3 +29,10 @@ else
 {
 	debug "else 0";
 }
+
+int e = 10;
+while (! e )
+{
+	e = e - 1;
+	debug e;
+}

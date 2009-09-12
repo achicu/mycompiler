@@ -29,7 +29,7 @@ extern char *yytext;
 
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN
-%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT
+%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN
 
 %left MINUS PLUS
 %left MULTIPLY DIVIDE
@@ -54,6 +54,7 @@ extern char *yytext;
 %type <nodeList> ExpressionList
 %type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement AssignmentStatement InBlockStatement
 %type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement IfStatement
+%type <statementNode> WhileStatement
 %type <statementList> GlobalStatementList InMethodStatementList InStructStatementList InBlockStatementList BlockOrStatement
 %type <identifierList> IdentifierList
 %type <typeNodeList> TypeDeclarationList
@@ -118,6 +119,7 @@ InBlockStatement:
 | ReturnStatement
 | DebugStatement
 | IfStatement
+| WhileStatement
 ;
 
 BlockOrStatement:
@@ -129,6 +131,10 @@ BlockOrStatement:
 IfStatement:
   IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement ELSE_TOKEN BlockOrStatement { $$ = new IfStatement($3, $5, $7); DBG($$, @1, @7); }
 | IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement { $$ = new IfStatement($3, $5, 0); DBG($$, @1, @5); }
+;
+
+WhileStatement:
+  WHILE_TOKEN PARAN_START Expression PARAN_END BlockOrStatement { $$ = new WhileStatement($3, $5); DBG($$, @1, @5); }
 ;
 
 DebugStatement:
