@@ -1,46 +1,36 @@
-debug "check that everything is 1";
+debug "have to see 1, 0, 0";
+debug 2 <= 3;
+debug 2 >= 3;
+debug 2 == 3;
 
-debug "int:";
-debug 10 + 50 == 60;
-debug 11 - 4 == 7;
-debug 12 * 4 == 48;
-debug 32 / 2 == 16;
-debug 49 > 116 == 0;
-debug 141 > 117 == 1;
-debug 49 < 119 == 1;
-debug 140 < 126 == 0;
+debug "plus - minus";
+debug "have to see 2, 2, 1, 1, 2, 1, 1, 2";
+debug "ints";
+int a = 2;
 
-debug "floats:";
-debug 10.0 + 50.0 == 60.0;
-debug 11.0 - 4.0 == 7.0;
-debug 12.0 * 4.0 == 48.0;
-debug 32.0 / 2.0 == 16.0;
-debug 49.0 > 116.0 == 0.0;
-debug 141.0 > 117.0 == 1.0;
-debug 49.0 < 119.0 == 1.0;
-debug 140.0 < 126.0 == 0.0;
+debug a;
+debug a--;
 
-debug "if tests:";
-if ( 1 < 10 )
-{
-	debug "1";
-}
+debug a;
+debug a++;
 
-if ( 2 > 11 )
-{
-	debug "0";
-}
-else
-{
-	debug "1";
-}
+debug a;
+debug --a;
 
-debug "while:";
-int a = 0;
-while (a < 20)
-{
-	a = a + 1;
-}
-debug a == 20;
+debug a;
+debug ++a;
 
-debug "done";
+debug "floats";
+number b = 2;
+
+debug b;
+debug b--;
+
+debug b;
+debug b++;
+
+debug b;
+debug --b;
+
+debug b;
+debug ++b;

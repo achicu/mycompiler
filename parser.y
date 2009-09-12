@@ -28,8 +28,9 @@ extern char *yytext;
 %}
 
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
-%token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN
-%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN D_EQUALS
+%token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN MORE_EQUALS
+%token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN D_EQUALS LESS_EQUALS BIT_AND_TOKEN AND_TOKEN BIT_OR_TOKEN OR_TOKEN
+%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN
 
 %left MINUS PLUS
 %left MULTIPLY DIVIDE
@@ -49,6 +50,7 @@ extern char *yytext;
 }
 
 %type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression CompareExpression AssignmentExpression
+%type <arenaNode> PlusPlusOrMinusMinusExpression
 %type <identifierNode> Identifier
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
@@ -170,10 +172,18 @@ NegationExpression:
 | NOT NegationExpression                            { $$ = new UnaryOpNode(unary_op_not, $2); DBG($$, @1, @2); }
 ;
 
-MultiplyExpression:
+PlusPlusOrMinusMinusExpression:
   NegationExpression
-| MultiplyExpression MULTIPLY NegationExpression    { $$ = new BinaryOpNode(binary_op_multiply, $1, $3); DBG($$, @1, @3); }
-| MultiplyExpression DIVIDE NegationExpression      { $$ = new BinaryOpNode(binary_op_divide, $1, $3); DBG($$, @1, @3); }
+| PLUSPLUS_TOKEN LeftSide                  { $$ = new UnaryOpNode(unary_op_plusplus_prefix, $2); DBG($$, @1, @2); }
+| LeftSide PLUSPLUS_TOKEN                  { $$ = new UnaryOpNode(unary_op_plusplus_sufix, $1); DBG($$, @1, @2); }
+| MINUSMINUS_TOKEN LeftSide                { $$ = new UnaryOpNode(unary_op_minusminus_prefix, $2); DBG($$, @1, @2); }
+| LeftSide MINUSMINUS_TOKEN                { $$ = new UnaryOpNode(unary_op_minusminus_sufix, $1); DBG($$, @1, @2); }
+;
+
+MultiplyExpression:
+  PlusPlusOrMinusMinusExpression
+| MultiplyExpression MULTIPLY PlusPlusOrMinusMinusExpression    { $$ = new BinaryOpNode(binary_op_multiply, $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression DIVIDE PlusPlusOrMinusMinusExpression      { $$ = new BinaryOpNode(binary_op_divide, $1, $3); DBG($$, @1, @3); }
 ;
 
 PlusExpression:
@@ -187,6 +197,8 @@ CompareExpression:
 | CompareExpression LESS PlusExpression         { $$ = new BinaryOpNode(binary_op_less, $1, $3); DBG($$, @1, @3); }
 | CompareExpression MORE PlusExpression         { $$ = new BinaryOpNode(binary_op_more, $1, $3); DBG($$, @1, @3); }
 | CompareExpression D_EQUALS PlusExpression     { $$ = new BinaryOpNode(binary_op_equal, $1, $3); DBG($$, @1, @3); }
+| CompareExpression LESS_EQUALS PlusExpression     { $$ = new BinaryOpNode(binary_op_less_or_equal, $1, $3); DBG($$, @1, @3); }
+| CompareExpression MORE_EQUALS PlusExpression     { $$ = new BinaryOpNode(binary_op_more_or_equal, $1, $3); DBG($$, @1, @3); }
 ;
 
 
@@ -199,6 +211,8 @@ Literal:
 | FLOAT_NUMBER      { $$ = new FloatValueNode(atof(yytext)); DBG($$, @1, @1); }
 | MINUS INTEGER_NUMBER    { $$ = new IntegerValueNode(-atoi(yytext)); DBG($$, @1, @1); }
 | MINUS FLOAT_NUMBER      { $$ = new FloatValueNode(-atof(yytext)); DBG($$, @1, @1); }
+| PLUS INTEGER_NUMBER    { $$ = new IntegerValueNode(atoi(yytext)); DBG($$, @1, @1); }
+| PLUS FLOAT_NUMBER      { $$ = new FloatValueNode(atof(yytext)); DBG($$, @1, @1); }
 | STRING_TOKEN      { $$ = new StringValueNode(yytext); DBG($$, @1, @1); }
 | CallExpression    { $$ = $1; DBG($$, @1, @1); }
 | Identifier        { $$ = $1; DBG($$, @1, @1); }

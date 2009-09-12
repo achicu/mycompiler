@@ -36,7 +36,8 @@ enum BinaryOpcode
     binary_op_more_or_equal,
     binary_op_bit_and,
     binary_op_bit_or,
-    binary_op_bit_xor
+    binary_op_bit_xor,
+    
 };
 
 const char* UnaryOpcodeToString(UnaryOpcode opcode);

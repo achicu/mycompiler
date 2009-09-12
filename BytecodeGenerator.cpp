@@ -95,8 +95,14 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
         case binary_op_less:
             generator->EmitBytecode(op_int_less);
         break;
+        case binary_op_less_or_equal:
+            generator->EmitBytecode(op_int_less_or_equal);
+        break;
         case binary_op_more:
             generator->EmitBytecode(op_int_more);
+        break;
+        case binary_op_more_or_equal:
+            generator->EmitBytecode(op_int_more_or_equal);
         break;
         case binary_op_equal:
             generator->EmitBytecode(op_int_equals);
@@ -121,14 +127,54 @@ Register* IntType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode
     {
         case unary_op_not:
             generator->EmitBytecode(op_int_not);
+            generator->EmitRegister(dst);
+            generator->EmitRegister(reg1);
+    
+        break;
+        case unary_op_plusplus_prefix:
+            generator->EmitBytecode(op_int_plus_one);
+            generator->EmitRegister(reg1);
+            dst = reg1;
+        break;
+        case unary_op_plusplus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r (generator->NewTempRegister());
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(reg1);
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_int_plus_one);
+            generator->EmitRegister(reg1);
+        }
+        break;
+        case unary_op_minusminus_prefix:
+            generator->EmitBytecode(op_int_minus_one);
+            generator->EmitRegister(reg1);
+            dst = reg1;
+        break;
+        case unary_op_minusminus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r( generator->NewTempRegister() );
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(reg1);
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_int_minus_one);
+            generator->EmitRegister(reg1);
+        }
         break;
         default:
             printf(" unary %s operation not supported on ints\n", UnaryOpcodeToString(op));
             exit(1);
     }
-    
-    generator->EmitRegister(dst);
-    generator->EmitRegister(reg1);
     
     return dst;
 }
@@ -163,8 +209,16 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
             generator->EmitBytecode(op_float_less);
             dst->SetType(generator->GetGlobalData()->GetIntType());
         break;
+        case binary_op_less_or_equal:
+            generator->EmitBytecode(op_float_less_or_equal);
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+        break;
         case binary_op_more:
             generator->EmitBytecode(op_float_more);
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+        break;
+        case binary_op_more_or_equal:
+            generator->EmitBytecode(op_float_more_or_equal);
             dst->SetType(generator->GetGlobalData()->GetIntType());
         break;
         case binary_op_equal:
@@ -191,14 +245,54 @@ Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpco
     {
         case unary_op_not:
             generator->EmitBytecode(op_float_not);
+            generator->EmitRegister(dst);
+            generator->EmitRegister(reg1);
+    
+        break;
+        case unary_op_plusplus_prefix:
+            generator->EmitBytecode(op_float_plus_one);
+            generator->EmitRegister(reg1);
+            dst = reg1;
+        break;
+        case unary_op_plusplus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r (generator->NewTempRegister());
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(reg1);
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_float_plus_one);
+            generator->EmitRegister(reg1);
+        }
+        break;
+        case unary_op_minusminus_prefix:
+            generator->EmitBytecode(op_float_minus_one);
+            generator->EmitRegister(reg1);
+            dst = reg1;
+        break;
+        case unary_op_minusminus_sufix:
+        {
+            // let the user get the old value
+            RefPtr<Register> r( generator->NewTempRegister() );
+            r->SetType(this);
+            
+            generator->EmitBytecode(op_assign);
+            generator->EmitRegister(r.Ptr());
+            generator->EmitRegister(reg1);
+            dst = r.Ptr();
+            
+            generator->EmitBytecode(op_float_minus_one);
+            generator->EmitRegister(reg1);
+        }
         break;
         default:
-            printf("%s operation not supported on ints\n", UnaryOpcodeToString(op));
+            printf(" unary %s operation not supported on floats\n", UnaryOpcodeToString(op));
             exit(1);
     }
-    
-    generator->EmitRegister(dst);
-    generator->EmitRegister(reg1);
     
     return dst;
 }

@@ -169,7 +169,7 @@ std::string BinaryOpNode::ToString() const
     if (m_node1.Ptr())
         o << m_node1->ToString() << " ";
 
-    o << m_op << " ";
+    o << BinaryOpcodeToString(m_op) << " ";
 
     if (m_node2.Ptr())
         o << m_node2->ToString();
@@ -217,7 +217,7 @@ std::string UnaryOpNode::ToString() const
     std::ostringstream o;
     o << "(";
 
-    o << m_op << " ";
+    o << UnaryOpcodeToString(m_op) << " ";
 
     if (m_node1.Ptr())
         o << m_node1->ToString() << " ";
@@ -582,6 +582,7 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     }
     else
     {
+        assert(dst->GetType());
         printf("debug failed for type %s\n", dst->GetType()->Name().c_str());
     }
     

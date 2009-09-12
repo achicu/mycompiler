@@ -123,6 +123,12 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
         OPCODE(op_int_plus)
             R(1).asInt = R(2).asInt + R(3).asInt;
         NEXT()
+        OPCODE(op_int_plus_one)
+            R(1).asInt ++;
+        NEXT()
+        OPCODE(op_int_minus_one)
+            R(1).asInt --;
+        NEXT()
         OPCODE(op_int_minus)
             R(1).asInt = R(2).asInt - R(3).asInt;
         NEXT()
@@ -141,11 +147,23 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
         OPCODE(op_int_more)
             R(1).asInt = (R(2).asInt > R(3).asInt) ? 1 : 0;
         NEXT()
+        OPCODE(op_int_less_or_equal)
+            R(1).asInt = (R(2).asInt <= R(3).asInt) ? 1 : 0;
+        NEXT()
+        OPCODE(op_int_more_or_equal)
+            R(1).asInt = (R(2).asInt >= R(3).asInt) ? 1 : 0;
+        NEXT()
         OPCODE(op_int_equals)
             R(1).asInt = (R(2).asInt == R(3).asInt) ? 1 : 0;
         NEXT()
         OPCODE(op_float_plus)
             R(1).asFloat = R(2).asFloat + R(3).asFloat;
+        NEXT()
+        OPCODE(op_float_plus_one)
+            R(1).asFloat ++;
+        NEXT()
+        OPCODE(op_float_minus_one)
+            R(1).asFloat --;
         NEXT()
         OPCODE(op_float_minus) 
             R(1).asFloat = R(2).asFloat - R(3).asFloat;
@@ -164,6 +182,12 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
         NEXT()
         OPCODE(op_float_more)
             R(1).asInt = (R(2).asFloat > R(3).asFloat) ? 1 : 0;
+        NEXT()
+        OPCODE(op_float_less_or_equal)
+            R(1).asInt = (R(2).asFloat <= R(3).asFloat) ? 1 : 0;
+        NEXT()
+        OPCODE(op_float_more_or_equal)
+            R(1).asInt = (R(2).asFloat >= R(3).asFloat) ? 1 : 0;
         NEXT()
         OPCODE(op_float_equals)
             R(1).asInt = (R(2).asFloat == R(3).asFloat) ? 1 : 0;
