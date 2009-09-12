@@ -178,7 +178,7 @@ private:
     RefPtr<ArenaNode> m_node2;
 };
 
-class AssignNode: public StatementNode
+class AssignNode: public ArenaNode
 {
 public:
     AssignNode(ArenaNode* node1, ArenaNode* node2)

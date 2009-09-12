@@ -1,0 +1,75 @@
+int t = (10 + 5) * 2;
+number z = 10.5;
+debug t + 20 * 50;
+t = 200 + z;
+debug t;
+debug 200 + z;
+debug "gfgf"+ 10.3 + "gg";
+int t2 = "10";
+debug t2;
+number t3 = "10.77";
+debug t3;
+
+number a = 0 - 1;
+if (a + 1)
+{
+	debug "a + 1";
+}
+
+if (1)
+{
+	debug -122;
+}
+
+if (!0)
+{
+	debug "0";
+}
+else
+{
+	debug "else 0";
+}
+
+
+if (30 > 20) debug "30 > 20";
+if (20 > !30) debug "20 > !30";
+if (30.3 > 30) debug "30.3 > 30";
+
+int e = 10;
+while ( e > 0 )
+{
+	e = e - 1;
+	debug e;
+}
+
+e = 1;
+if (e)
+{
+	debug "ok";
+}
+
+e = 0;
+if (e == 0)
+{
+	debug "ok";
+}
+
+if (10.5 == 10.6)
+{
+	debug "not ok";
+}
+
+if (10.5 == 10.5)
+	debug "ok";
+
+if (10 == 10)
+{
+	debug "ok";
+}
+
+int a = 2;
+a = 3; debug a;
+int b = a = 4; debug a; debug b;
+debug a = 1 - 1 > 0 == 0;
+debug a;
+

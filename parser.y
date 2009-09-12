@@ -48,11 +48,11 @@ extern char *yytext;
     ArgumentNode* argumentNode;
 }
 
-%type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression CompareExpression
+%type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression CompareExpression AssignmentExpression
 %type <identifierNode> Identifier
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
-%type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement AssignmentStatement InBlockStatement
+%type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement InBlockStatement
 %type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement IfStatement
 %type <statementNode> WhileStatement
 %type <statementList> GlobalStatementList InMethodStatementList InStructStatementList InBlockStatementList BlockOrStatement
@@ -114,7 +114,6 @@ InMethodStatement:
 
 InBlockStatement:
   EmptyStatement
-| AssignmentStatement
 | ExpressionStatement
 | ReturnStatement
 | DebugStatement
@@ -150,8 +149,9 @@ EmptyStatement:
  SEMICOLON  { $$ = 0; }
 ;
 
-AssignmentStatement:
-  LeftSide EQUALS Expression SEMICOLON  { $$ = new AssignNode($1, $3); DBG($$, @1, @4); }
+AssignmentExpression:
+  CompareExpression
+| LeftSide EQUALS Expression { $$ = new AssignNode($1, $3); DBG($$, @1, @3); }
 ;
 
 ExpressionList:
@@ -170,17 +170,10 @@ NegationExpression:
 | NOT NegationExpression                            { $$ = new UnaryOpNode('!', $2); DBG($$, @1, @2); }
 ;
 
-CompareExpression:
-  NegationExpression
-| CompareExpression LESS NegationExpression         { $$ = new BinaryOpNode('<', $1, $3); DBG($$, @1, @3); }
-| CompareExpression MORE NegationExpression         { $$ = new BinaryOpNode('>', $1, $3); DBG($$, @1, @3); }
-| CompareExpression D_EQUALS NegationExpression     { $$ = new BinaryOpNode('=', $1, $3); DBG($$, @1, @3); }
-;
-
 MultiplyExpression:
-  CompareExpression
-| MultiplyExpression MULTIPLY CompareExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
-| MultiplyExpression DIVIDE CompareExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
+  NegationExpression
+| MultiplyExpression MULTIPLY NegationExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression DIVIDE NegationExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
 ;
 
 PlusExpression:
@@ -188,6 +181,14 @@ PlusExpression:
 | PlusExpression PLUS MultiplyExpression    { $$ = new BinaryOpNode('+', $1, $3); DBG($$, @1, @3); }
 | PlusExpression MINUS MultiplyExpression   { $$ = new BinaryOpNode('-', $1, $3); DBG($$, @1, @3); }
 ;
+
+CompareExpression:
+  PlusExpression
+| CompareExpression LESS PlusExpression         { $$ = new BinaryOpNode('<', $1, $3); DBG($$, @1, @3); }
+| CompareExpression MORE PlusExpression         { $$ = new BinaryOpNode('>', $1, $3); DBG($$, @1, @3); }
+| CompareExpression D_EQUALS PlusExpression     { $$ = new BinaryOpNode('=', $1, $3); DBG($$, @1, @3); }
+;
+
 
 Identifier:
   IDENTIFIER        { $$ = new IdentifierNode(yytext); DBG($$, @1, @1); }
@@ -211,7 +212,7 @@ CallExpression:
 
 Expression:
   CallExpression    { $$ = $1; DBG($$, @1, @1); }
-| PlusExpression
+| AssignmentExpression
 ;
 
 ExpressionStatement:

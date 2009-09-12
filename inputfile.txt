@@ -1,31 +1,5 @@
-int e = 10;
-while ( e > 0 )
-{
-	e = e - 1;
-	debug e;
-}
-
-e = 1;
-if (e)
-{
-	debug "ok";
-}
-
-e = 0;
-if (e == 0)
-{
-	debug "ok";
-}
-
-if (10.5 == 10.6)
-{
-	debug "not ok";
-}
-
-if (10.5 == 10.5)
-	debug "ok";
-
-if (10 == 10)
-{
-	debug "ok";
-}
+int a = 2;
+a = 3; debug a;
+int b = a = 4; debug a; debug b;
+debug a = 1 - 1 > 0 == 0;
+debug a;
