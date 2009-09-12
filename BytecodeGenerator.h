@@ -16,6 +16,9 @@
 #include "RefPtr.h"
 #include "Nodes.h"
 
+class BytecodeGenerator;
+class Type;
+
 class Register : public RefCounted
 {
 public:
@@ -29,24 +32,21 @@ public:
     
     void SetIgnored() { m_ignored = true; }
     bool IsIgnored() const { return m_ignored; }
+    
+    Type* GetType() const { return m_type.Ptr(); }
+    void SetType(Type* type) { m_type = type; }
 
 private:
     int m_number;
     bool m_temporary;
     bool m_ignored;
-};
-
-enum BuiltinTypes
-{
-    NUMBER,
-    STRING,
-    CODE
+    RefPtr<Type> m_type;
 };
 
 class Type: public RefCounted
 {
 public:
-    Type(std::string& name)
+    Type(std::string name)
         : m_name(name)
     {
     }
@@ -57,11 +57,69 @@ public:
     {
         m_templateTypes.push_back(type);
     }
+    
+    virtual bool IsBuiltin() const { return false; }
+    
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char m_op, Register* reg1, Register* reg2, Register* dst);
 
 private:
-    bool isBuiltin;
     std::string m_name;
     std::vector<RefPtr<Type> > m_templateTypes;
+};
+
+class BuiltinType: public Type
+{
+public:
+    BuiltinType(std::string name)
+        : Type(name)
+    {
+    }
+    
+    virtual int GetPriority() const { return 0; }
+    
+    virtual bool IsBuiltin() const { return true; }
+
+protected:
+    bool CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2);
+};
+
+class IntType: public BuiltinType
+{
+public:
+    IntType()
+        : BuiltinType("int")
+    {
+    }
+    
+    virtual int GetPriority() const { return 0; }
+        
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
+};
+
+class FloatType: public BuiltinType
+{
+public:
+    FloatType()
+        : BuiltinType("number")
+    {
+    }
+    
+    virtual int GetPriority() const { return 1; }
+    
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
+};
+
+class StringType: public BuiltinType
+{
+public:
+    StringType()
+        : BuiltinType("string")
+    {
+    }
+    
+    virtual int GetPriority() const { return 2; }
+    
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
 };
 
 class Property: public RefCounted
@@ -93,19 +151,7 @@ public:
     {
     }
     
-    Property* GetProperty(std::string& name) const
-    {
-        PropertyMap::const_iterator iter = m_properties.find(name);
-        if (iter != m_properties.end())
-            return (*iter).second.Ptr();
-        
-        if (m_parentScope.Ptr())
-        {
-            return m_parentScope->GetProperty(name);
-        }
-
-        return 0;
-    }
+    Property* GetProperty(BytecodeGenerator* generator, std::string& name) const;
     
     Property* PutProperty(std::string& name, Type* type)
     {
@@ -132,54 +178,26 @@ class GlobalData: public RefCounted
 {
     typedef std::map<std::string, RefPtr<Type> > TypeList;
 public:
-
-    Type* GetTypeOf(TypeNode* typeNode)
-    {
-        std::string completeName = typeNode->CompleteTypeName();
-        TypeList::const_iterator iter = m_typeList.find( completeName );
-        if (iter != m_typeList.end())
-        {
-            return (*iter).second.Ptr();
-        }
-        
-        PassRef<Type> type (AdoptRef( new Type(completeName) ));
-        
-        TypeNodeList* typeNodeList = typeNode->GetTypeNodeList();
-        if (typeNodeList)
-        {
-            for (int i=0; i<typeNodeList->size(); ++i)
-                type->AddTemplateType( GetTypeOf (typeNodeList->at(i).Ptr()) );
-        }
-        
-        m_typeList[completeName] = type;
-        
-        return type.Ptr();
-    }
+    GlobalData();
     
-    int GetConstantFloatIndex(double d)
-    {
-        for (int i=0; i<m_floatConstants.size(); ++i)
-            if (m_floatConstants[i] == d)
-                return i;
-
-        m_floatConstants.push_back(d);
-        return m_floatConstants.size() - 1;
-    }
+    Type* GetTypeOf(TypeNode* typeNode);
+    int GetConstantFloatIndex(double d);
+    int GetConstantStringIndex(std::string d);
     
-    int GetConstantStringIndex(std::string d)
-    {
-        for (int i=0; i<m_stringConstants.size(); ++i)
-            if (m_stringConstants[i] == d)
-                return i;
-
-        m_stringConstants.push_back(d);
-        return m_stringConstants.size() - 1;
-    }
+    Type* GetIntType() const { return m_intType.Ptr(); }
+    Type* GetFloatType() const { return m_floatType.Ptr(); }
+    Type* GetStringType() const { return m_stringType.Ptr(); }
+//    Type* GetVectorType() const { return m_vectorType.Ptr(); }
     
 private:
     TypeList m_typeList;
     std::vector<double> m_floatConstants;
     std::vector<std::string> m_stringConstants;
+
+    RefPtr<IntType> m_intType;
+    RefPtr<FloatType> m_floatType;
+    RefPtr<StringType> m_stringType;
+//    RefPtr<VectorType> m_vectorType;
     
 };
 
@@ -193,7 +211,6 @@ public:
     PassRef<Register> NewTempRegister();    
     PassRef<Register> NewRegister();    
     
-    void DeclareArguments(MethodNode* method);
     
     Register* EmitNode(ArenaNode* node, Register* destination);
     Register* EmitNode(ArenaNode* node);
@@ -207,8 +224,13 @@ public:
     void EmitConstantFloat(double value);
     void EmitConstantInt(int value);
     void EmitConstantString(std::string value);
+    
+    Property* GetProperty(std::string& name);
+    
+    void CoerceInPlace(Register* reg, Type* otherType);
 
-private:    
+private:  
+    void DeclareArguments(MethodNode* method);
     void DeclareProperty(std::string& name, Type* type);
     
     RefPtr<GlobalData> m_globalData;

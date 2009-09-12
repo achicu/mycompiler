@@ -34,6 +34,8 @@ Register* FloatValueNode::EmitBytecode(BytecodeGenerator* generator, Register* d
     generator->EmitRegister(dst);
     generator->EmitConstantFloat(m_value);
     
+    dst->SetType(generator->GetGlobalData()->GetFloatType());
+    
     return dst;
 }
 
@@ -58,6 +60,8 @@ Register* IntegerValueNode::EmitBytecode(BytecodeGenerator* generator, Register*
     generator->EmitBytecode(op_load_int_constant);
     generator->EmitRegister(dst);
     generator->EmitConstantInt(m_value);
+    
+    dst->SetType(generator->GetGlobalData()->GetIntType());
     
     return dst;
 }
@@ -85,6 +89,8 @@ Register* StringValueNode::EmitBytecode(BytecodeGenerator* generator, Register* 
     generator->EmitRegister(dst);
     generator->EmitConstantString(m_value);
     
+    dst->SetType(generator->GetGlobalData()->GetStringType());
+    
     return dst;
 }
 
@@ -101,6 +107,21 @@ std::string IdentifierNode::ToString() const
     o << "<<" << m_value << ">>";
 	return o.str();
 }
+
+Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    
+    Property* property = generator->GetProperty(m_value);
+    if (!property)
+    {
+        printf("Property not found %s\n", m_value.c_str());
+    }
+
+    dst->SetIgnored();
+    return property->GetRegister();
+}
+
 
 // ============ ExpressionNode ============
 
@@ -166,34 +187,17 @@ Register* BinaryOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst
     assert(m_node2.Ptr());
     
     RefPtr<Register> reg1 = generator->NewTempRegister();
-    m_node1->EmitBytecode(generator, reg1.Ptr());
+    reg1 = m_node1->EmitBytecode(generator, reg1.Ptr());
     
     RefPtr<Register> reg2 = generator->NewTempRegister();
-    m_node2->EmitBytecode(generator, reg2.Ptr());
+    reg2 = m_node2->EmitBytecode(generator, reg2.Ptr());
     
-    switch(m_op)
-    {
-        case '+':
-            generator->EmitBytecode(op_plus);
-        break;
-        case '*':
-            generator->EmitBytecode(op_multiply);
-        break;
-        case '-':
-            generator->EmitBytecode(op_minus);
-        break;
-        case '\\':
-            generator->EmitBytecode(op_divide);
-        break;
-        default:
-            assert(false);
-    }
+    Type* type1 = reg1->GetType();
+    Type* type2 = reg2->GetType();
+    assert(type1);
+    assert(type2);
     
-    generator->EmitRegister(dst);
-    generator->EmitRegister(reg1.Ptr());
-    generator->EmitRegister(reg2.Ptr());
-    
-    return dst;
+    return type1->EmitBinaryOpBytecode(generator, type2, m_op, reg1.Ptr(), reg2.Ptr(), dst);
 }
 
 // ============ AssignNode ============
@@ -217,6 +221,28 @@ std::string AssignNode::ToString() const
     
     return o.str();
 }
+
+Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    if (!dst)
+        dst = generator->NewTempRegister().Ptr();
+    
+    assert(m_node1.Ptr());
+    assert(m_node2.Ptr());
+    
+    RefPtr<Register> reg1(dst); // protect the destination pointer
+    reg1 = m_node1->EmitBytecode(generator, dst);
+    
+    RefPtr<Register> reg2 = generator->NewTempRegister();
+    m_node2->EmitBytecode(generator, reg2.Ptr());
+    
+    generator->EmitBytecode(op_assign);
+    generator->EmitRegister(reg1.Ptr());
+    generator->EmitRegister(reg2.Ptr());
+    
+    return reg1.Ptr();
+}
+
 
 // ============ AccessorNode ============
 
@@ -389,6 +415,26 @@ std::string VarStatement::ToString() const
     return o.str();
 }
 
+Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst == 0);
+    assert(m_nameIdentifier.Ptr());
+    if (m_initializer.Ptr())
+    {
+        RefPtr<Register> initializedValue = generator->NewTempRegister();
+        initializedValue = m_initializer->EmitBytecode(generator, initializedValue.Ptr());
+        
+        Property* property = generator->GetProperty(m_nameIdentifier->Value());
+        assert(property);
+        
+        generator->EmitBytecode(op_assign);
+        generator->EmitRegister(property->GetRegister());
+        generator->EmitRegister(initializedValue.Ptr());
+    }
+    
+    return 0;
+}
+
 // ============ ExpressionStatement ============
 
 std::string ExpressionStatement::ToString() const
@@ -413,7 +459,5 @@ Register* ExpressionStatement::EmitBytecode(BytecodeGenerator* generator, Regist
     if (!dst)
         dst = generator->NewTempRegister().Ptr();
     
-    m_expression->EmitBytecode(generator, dst);
-    
-    return dst;
+    return m_expression->EmitBytecode(generator, dst);
 }

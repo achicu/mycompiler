@@ -108,6 +108,8 @@ public:
     
     std::string& Value() { return m_value; }
     
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
 private:
     std::string m_value;
 };
@@ -169,6 +171,8 @@ public:
 
     virtual std::string ToString() const;
     
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
 private:
     RefPtr<ArenaNode> m_node1;
     RefPtr<ArenaNode> m_node2;
@@ -200,6 +204,8 @@ public:
     }
     
     virtual std::string ToString() const;
+    
+
     
 private:
     RefPtr<ArenaNode> m_node;
@@ -308,6 +314,8 @@ public:
     
     TypeNode* GetTypeNode() const { return m_typeNode.Ptr(); }
     IdentifierNode* Identifier() const { return m_nameIdentifier.Ptr(); }
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
     
 private:
     RefPtr<TypeNode> m_typeNode;

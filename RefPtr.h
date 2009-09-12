@@ -79,7 +79,7 @@ class RefPtr
         RefPtr(Type* ptr) : m_ptr(ptr) { if (m_ptr != 0) m_ptr->Ref(); }
         RefPtr(const RefPtr& other) : m_ptr(other.m_ptr) { if (m_ptr != 0) m_ptr->Ref(); }
         RefPtr(const PassRef<Type>& other) : m_ptr(other.m_ptr) { other.m_ptr = 0; }
-        
+                
         ~RefPtr() { if (m_ptr != 0) m_ptr->Deref(); };
         
         Type* operator->() const

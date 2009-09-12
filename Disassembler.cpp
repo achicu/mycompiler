@@ -48,16 +48,16 @@ void Disassemble(std::vector<Bytecode>* buffer)
             switch(*structure)
             {
                 case 'r':
-                    printf(", register %d", byte.RegisterNumber);
+                    printf("\n\tregister %d", byte.RegisterNumber);
                 break;
                 case 's':
-                    printf(", constant string index %d", byte.ConstantStringIndex);
+                    printf("\n\tconstant string index %d", byte.ConstantStringIndex);
                 break;
                 case 'i':
-                    printf(", constant int %d", byte.ConstantInt);
+                    printf("\n\tconstant int %d", byte.ConstantInt);
                 break;
                 case 'f':
-                    printf(", constant float index %d", byte.ConstantFloatIndex);
+                    printf("\n\tconstant float index %d", byte.ConstantFloatIndex);
                 break;
             }
             ++ structure;

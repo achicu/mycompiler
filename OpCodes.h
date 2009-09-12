@@ -10,10 +10,19 @@
     MACRO(op_load_float_constant, "rf", 2) \
     MACRO(op_load_int_constant, "ri", 2) \
     MACRO(op_load_string_constant, "rs", 2) \
-    MACRO(op_plus, "rrr", 3) \
-    MACRO(op_minus, "rrr", 3) \
-    MACRO(op_multiply, "rrr", 3) \
-    MACRO(op_divide, "rrr", 3)
+    MACRO(op_int_plus, "rrr", 3) \
+    MACRO(op_int_minus, "rrr", 3) \
+    MACRO(op_int_multiply, "rrr", 3) \
+    MACRO(op_int_divide, "rrr", 3) \
+    MACRO(op_float_plus, "rrr", 3) \
+    MACRO(op_float_minus, "rrr", 3) \
+    MACRO(op_float_multiply, "rrr", 3) \
+    MACRO(op_float_divide, "rrr", 3) \
+    MACRO(op_coerce_int_float, "r", 1) \
+    MACRO(op_coerce_int_string, "r", 1) \
+    MACRO(op_coerce_float_int, "r", 1) \
+    MACRO(op_coerce_float_string, "r", 1) \
+    MACRO(op_assign, "rr", 2)
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,
 enum OpCode

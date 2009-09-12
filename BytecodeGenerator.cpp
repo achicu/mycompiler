@@ -8,6 +8,187 @@
 
 #include "BytecodeGenerator.h"
 #include "Disassembler.h"
+#include "OpCodes.h"
+
+Property* Scope::GetProperty(BytecodeGenerator* generator, std::string& name) const
+{
+    PropertyMap::const_iterator iter = m_properties.find(name);
+    if (iter != m_properties.end())
+        return (*iter).second.Ptr();
+    
+    if (generator && m_parentScope.Ptr())
+    {
+        return m_parentScope->GetProperty(generator, name);
+    }
+
+    return 0;
+}
+
+bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2)
+{
+    if (type2 != this)
+    {
+        // have to convert me or the other to my type
+        if (!type2->IsBuiltin())
+        {
+            printf("Error: trying to do %s %c %s\n", Name().c_str(), op, type2->Name().c_str());
+            exit(1);
+        }
+        
+        if (static_cast<BuiltinType*>(type2)->GetPriority() > GetPriority())
+        {
+            // coerce me to the other
+            generator->CoerceInPlace(reg1, type2);
+            return false;
+        }
+        else
+        {
+            // coerce the other to me
+            generator->CoerceInPlace(reg2, this);
+        }
+    }
+    
+    return true;
+}
+
+Register* Type::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+{
+    // arbitrary type operators not supported, yet
+    printf("Error: trying to do %s %c %s\n", Name().c_str(), op, type2->Name().c_str());
+    exit(1);
+}
+
+Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+{
+    if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
+    {
+        // reverse if cannot do it
+        return type2->EmitBinaryOpBytecode(generator, type2, op, reg1, reg2, dst);
+    }
+    
+    assert(reg1->GetType() == reg2->GetType());
+    dst->SetType(this);
+    
+    switch(op)
+    {
+        case '+':
+            generator->EmitBytecode(op_int_plus);
+        break;
+        case '*':
+            generator->EmitBytecode(op_int_multiply);
+        break;
+        case '-':
+            generator->EmitBytecode(op_int_minus);
+        break;
+        case '/':
+            generator->EmitBytecode(op_int_divide);
+        break;
+        default:
+            assert(false);
+    }
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(reg1);
+    generator->EmitRegister(reg2);
+    
+    return dst;
+}
+
+Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+{
+    if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
+    {
+        // reverse if cannot do it
+        return type2->EmitBinaryOpBytecode(generator, this, op, reg1, reg2, dst);
+    }
+    
+    assert(reg1->GetType() == reg2->GetType());
+    dst->SetType(this);
+    
+    switch(op)
+    {
+        case '+':
+            generator->EmitBytecode(op_float_plus);
+        break;
+        case '*':
+            generator->EmitBytecode(op_float_multiply);
+        break;
+        case '-':
+            generator->EmitBytecode(op_float_minus);
+        break;
+        case '/':
+            generator->EmitBytecode(op_float_divide);
+        break;
+        default:
+            assert(false);
+    }
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(reg1);
+    generator->EmitRegister(reg2);
+    
+    return dst;
+}
+
+Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst)
+{
+    assert(false);
+}
+
+GlobalData::GlobalData()
+    : m_intType(AdoptRef(new IntType()))
+    , m_floatType(AdoptRef(new FloatType()))
+    , m_stringType(AdoptRef(new StringType()))
+//    , m_vectorType(AdoptRef(new VectorType()))
+{
+    m_typeList[m_intType->Name()] = m_intType.Ptr();
+    m_typeList[m_floatType->Name()] = m_floatType.Ptr();
+    m_typeList[m_stringType->Name()] = m_stringType.Ptr();
+//    m_typeList["vector"] = m_vectorType;
+}
+
+Type* GlobalData::GetTypeOf(TypeNode* typeNode)
+{
+    std::string completeName = typeNode->CompleteTypeName();
+    TypeList::const_iterator iter = m_typeList.find( completeName );
+    if (iter != m_typeList.end())
+    {
+        return (*iter).second.Ptr();
+    }
+    
+    PassRef<Type> type (AdoptRef( new Type(completeName) ));
+    
+    TypeNodeList* typeNodeList = typeNode->GetTypeNodeList();
+    if (typeNodeList)
+    {
+        for (int i=0; i<typeNodeList->size(); ++i)
+            type->AddTemplateType( GetTypeOf (typeNodeList->at(i).Ptr()) );
+    }
+    
+    m_typeList[completeName] = type;
+    
+    return type.Ptr();
+}
+
+int GlobalData::GetConstantFloatIndex(double d)
+{
+    for (int i=0; i<m_floatConstants.size(); ++i)
+        if (m_floatConstants[i] == d)
+            return i;
+
+    m_floatConstants.push_back(d);
+    return m_floatConstants.size() - 1;
+}
+
+int GlobalData::GetConstantStringIndex(std::string d)
+{
+    for (int i=0; i<m_stringConstants.size(); ++i)
+        if (m_stringConstants[i] == d)
+            return i;
+
+    m_stringConstants.push_back(d);
+    return m_stringConstants.size() - 1;
+}
 
 BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope, MethodNode* method)
     : m_globalData(globalData)
@@ -113,16 +294,25 @@ void BytecodeGenerator::DeclareArguments(MethodNode* method)
     }
 }
 
+Property* BytecodeGenerator::GetProperty(std::string& name)
+{
+    return m_localScope->GetProperty(this, name);
+}
+
 void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
 {
-    if (m_localScope->GetProperty(name))
+    if (m_localScope->GetProperty(0, name))
     {
         printf("property name redclartion %s\n", name.c_str());
         return;
     }
     
     Property* property = m_localScope->PutProperty(name, type);
-    property->SetRegister(NewRegister());
+    PassRef<Register> reg = NewRegister();
+    reg->SetType(type);
+    property->SetRegister(reg);
+    
+    printf("Variable %s has register %d\n", name.c_str(), property->GetRegister()->Number());
 }
 
 Register* BytecodeGenerator::EmitNode(ArenaNode* node, Register* dst)
@@ -157,7 +347,6 @@ void BytecodeGenerator::Generate()
 
 void BytecodeGenerator::EmitBytecode(int bytecode)
 {
-    printf("Emitting bytecode %d\n", bytecode);
     Bytecode b;
     b.Code = bytecode;
     m_bytes.push_back(b);
@@ -192,3 +381,50 @@ void BytecodeGenerator::EmitConstantString(std::string value)
     m_bytes.push_back(b);
 }
 
+void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
+{
+    bool converted = false;
+    Type* type = reg->GetType();
+    assert(type != otherType);
+    
+    if (m_globalData->GetIntType() == type)
+    {
+        if (m_globalData->GetFloatType() == otherType)
+        {
+            EmitBytecode(op_coerce_int_float);
+            EmitRegister(reg);
+            converted = true;
+        }
+        else if (m_globalData->GetStringType() == otherType)
+        {
+            EmitBytecode(op_coerce_int_string);
+            EmitRegister(reg);
+            converted = true;
+        }
+    }
+    else if (m_globalData->GetFloatType() == type)
+    {
+        if (m_globalData->GetIntType() == otherType)
+        {
+            EmitBytecode(op_coerce_float_int);
+            EmitRegister(reg);
+            converted = true;
+        }
+        else if (m_globalData->GetStringType() == otherType)
+        {
+            EmitBytecode(op_coerce_float_string);
+            EmitRegister(reg);
+            converted = true;
+        }
+    }
+    
+    if (converted)
+    {
+        reg->SetType(otherType);
+    }
+    else
+    {
+        printf("Error: unable to coerce %s to %s\n", type->Name().c_str(), otherType->Name().c_str());
+        exit(1);
+    }
+}
