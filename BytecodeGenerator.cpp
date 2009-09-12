@@ -309,7 +309,13 @@ PassRef<Register> BytecodeGenerator::NewTempRegister()
 PassRef<Register> BytecodeGenerator::NewRegister()
 {
     while( m_registers.size() > m_calleeRegisters && m_registers.back()->HasOneRef() && m_registers.back()->IsIgnored())
+    {
+        Register* reg = m_registers.back().Ptr();
+        if (reg->GetType() && reg->GetType()->IsRefCounted())
+            EmitDecRef(reg);
+        
         m_registers.pop_back();
+    }
 
     RefPtr<Register> reg(AdoptRef(new Register(m_registers.size())));
     m_registers.push_back( reg );
@@ -353,9 +359,12 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
     }
     
     Property* property = m_localScope->PutProperty(name, type);
-    PassRef<Register> reg = NewRegister();
+    RefPtr<Register> reg = NewRegister();
     reg->SetType(type);
-    property->SetRegister(reg);
+    property->SetRegister(reg.Ptr());
+    
+    EmitBytecode(op_init_ref);
+    EmitRegister(reg.Ptr());
     
     printf("Variable %s has register %d\n", name.c_str(), property->GetRegister()->Number());
 }
@@ -389,6 +398,14 @@ void BytecodeGenerator::Generate()
             EmitNode(statement);
         }
     }
+    
+    for( int i=0; i<m_registers.size(); ++i )
+    {
+        Register* reg = m_registers.at(i).Ptr();
+        if (reg->GetType() && reg->GetType()->IsRefCounted())
+            EmitDecRef(reg);
+    }
+
     
     Disassemble(m_globalData.Ptr(), &m_bytes);
     Interpret(m_globalData.Ptr(), m_maxRegisterCount, &m_bytes);
@@ -492,3 +509,18 @@ void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
         exit(1);
     }
 }
+
+void BytecodeGenerator::EmitIncRef(Register* reg)
+{
+    assert(reg->GetType()->IsRefCounted());
+    EmitBytecode(op_inc_ref);
+    EmitRegister(reg);
+}
+
+void BytecodeGenerator::EmitDecRef(Register* reg)
+{
+    assert(reg->GetType()->IsRefCounted());
+    EmitBytecode(op_dec_ref);
+    EmitRegister(reg);
+}
+

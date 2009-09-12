@@ -28,7 +28,10 @@
     MACRO(op_assign, "rr", 2) \
     MACRO(op_debug_int, "r", 1) \
     MACRO(op_debug_float, "r", 1) \
-    MACRO(op_debug_string, "r", 1)
+    MACRO(op_debug_string, "r", 1) \
+    MACRO(op_inc_ref, "r", 1) \
+    MACRO(op_dec_ref, "r", 1) \
+    MACRO(op_init_ref, "r", 1)
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,
 enum OpCode

@@ -59,6 +59,7 @@ public:
     }
     
     virtual bool IsBuiltin() const { return false; }
+    virtual bool IsRefCounted() const { return false; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char m_op, Register* reg1, Register* reg2, Register* dst);
 
@@ -117,6 +118,7 @@ public:
     {
     }
     
+    virtual bool IsRefCounted() const { return true; }
     virtual int GetPriority() const { return 2; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, char op, Register* reg1, Register* reg2, Register* dst);
@@ -132,7 +134,7 @@ public:
     }
     
     Register* GetRegister() const { return m_register.Ptr(); }
-    void SetRegister(PassRef<Register> reg) { m_register = reg; }
+    void SetRegister(Register* reg) { m_register = reg; }
     
     std::string Name() const { return m_name; }
 private:
@@ -233,6 +235,9 @@ public:
     void CoerceInPlace(Register* reg, Type* otherType);
     
     int GetMaxRegisterCount() const { return m_maxRegisterCount; }
+    
+    void EmitIncRef(Register* reg);
+    void EmitDecRef(Register* reg);
 
 private:  
     void DeclareArguments(MethodNode* method);

@@ -1,2 +1,11 @@
 int t = (10 + 5) * 2;
+number z = 10.5;
 debug t + 20 * 50;
+t = 200 + z;
+debug t;
+debug 200 + z;
+debug "gfgf"+ 10.3 + "gg";
+int t2 = "10";
+debug t2;
+number t3 = "10.77";
+debug t3;

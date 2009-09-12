@@ -70,7 +70,7 @@ Register* IntegerValueNode::EmitBytecode(BytecodeGenerator* generator, Register*
 // ============= StringValueNode =============
 
 StringValueNode::StringValueNode(char* value)
-    : m_value(value)
+    : m_value(value + 1, strlen(value) - 2)
 {
 }
 
@@ -197,7 +197,14 @@ Register* BinaryOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst
     assert(type1);
     assert(type2);
     
-    return type1->EmitBinaryOpBytecode(generator, type2, m_op, reg1.Ptr(), reg2.Ptr(), dst);
+    dst = type1->EmitBinaryOpBytecode(generator, type2, m_op, reg1.Ptr(), reg2.Ptr(), dst);
+
+    /*if (dst->GetType()->IsRefCounted())
+    {
+        generator->EmitIncRef(dst);
+    }*/
+    
+    return dst;
 }
 
 // ============ AssignNode ============
@@ -241,9 +248,19 @@ Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         generator->CoerceInPlace(reg2.Ptr(), reg1->GetType());
     }
     
+    if (reg1->GetType()->IsRefCounted())
+    {
+        generator->EmitDecRef(reg1.Ptr());
+    }
+    
     generator->EmitBytecode(op_assign);
     generator->EmitRegister(reg1.Ptr());
     generator->EmitRegister(reg2.Ptr());
+    
+    if (reg1->GetType()->IsRefCounted())
+    {
+        generator->EmitIncRef(reg1.Ptr());
+    }
     
     return reg1.Ptr();
 }
@@ -437,9 +454,19 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
             generator->CoerceInPlace(initializedValue.Ptr(), property->GetRegister()->GetType());
         }
         
+        if (property->GetRegister()->GetType()->IsRefCounted())
+        {
+            generator->EmitDecRef(property->GetRegister());
+        }
+        
         generator->EmitBytecode(op_assign);
         generator->EmitRegister(property->GetRegister());
         generator->EmitRegister(initializedValue.Ptr());
+        
+        if (property->GetRegister()->GetType()->IsRefCounted())
+        {
+            generator->EmitIncRef(property->GetRegister());
+        }
     }
     
     return 0;
@@ -510,6 +537,11 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     {
         generator->EmitBytecode(op_debug_string);
     }
+    else
+    {
+        printf("debug failed for type %s\n", dst->GetType()->Name().c_str());
+    }
+    
     generator->EmitRegister(dst);
     
     return dst;
