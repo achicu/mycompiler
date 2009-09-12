@@ -14,6 +14,8 @@
 #include <vector>
 #include <sstream>
 
+class BytecodeGenerator;
+
 template <typename Type>
 class ArenaList: public ArenaNode, public std::vector<Type>
 {
@@ -64,6 +66,8 @@ public:
     
     virtual std::string ToString() const;
     
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
 private:
     double m_value;
 
@@ -75,6 +79,8 @@ public:
     IntegerValueNode(int value);
     
     virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
 
 private:
     int m_value;
@@ -87,6 +93,8 @@ public:
     
     virtual std::string ToString() const;
     
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
 private:
     std::string m_value;
 };
@@ -97,6 +105,8 @@ public:
     IdentifierNode(char* name);
     
     virtual std::string ToString() const;
+    
+    std::string& Value() { return m_value; }
     
 private:
     std::string m_value;
@@ -122,6 +132,10 @@ class StatementNode: public ArenaNode
 {
 public:
     virtual std::string ToString() const;
+    
+    virtual bool IsStructNode() const { return false; }
+    virtual bool IsMethodNode() const { return false; }
+    virtual bool IsVarStatement() const { return false; }
 };
 
 class BinaryOpNode: public ArenaNode
@@ -135,6 +149,8 @@ public:
     }
 
     virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
 
 private:
     char m_op;
@@ -193,17 +209,21 @@ private:
 class TypeNode: public ArenaNode
 {
 public:
-    TypeNode(IdentifierNode* typeIdentifier, TypeNodeList* identifierList)
+    TypeNode(IdentifierNode* typeIdentifier, TypeNodeList* typeNodeList)
         : m_typeIdentifier(typeIdentifier)
-        , m_identifierList(identifierList)
+        , m_typeNodeList(typeNodeList)
      {
      }
      
      virtual std::string ToString() const;
      
+     std::string CompleteTypeName() const;
+     
+     TypeNodeList* GetTypeNodeList() const { return m_typeNodeList.Ptr(); }
+     
 private:
     RefPtr<IdentifierNode> m_typeIdentifier;
-    RefPtr<TypeNodeList> m_identifierList;
+    RefPtr<TypeNodeList> m_typeNodeList;
 };
 
 class ArgumentNode: public ArenaNode
@@ -216,6 +236,10 @@ public:
     }
     
     virtual std::string ToString() const;
+    
+    IdentifierNode* Identifier(){ return m_identifier.Ptr(); }
+    TypeNode* Type(){ return m_typeNode.Ptr(); }
+    
     
 private:
     RefPtr<TypeNode> m_typeNode;
@@ -233,7 +257,13 @@ public:
     {
     }
     
+    virtual bool IsMethodNode() const { return true; }
+    
     virtual std::string ToString() const;
+    
+    StatementList* GetStatementList() const { return m_nodes.Ptr(); }
+    ArgumentNodeList* GetArgumentNodeList() const { return m_argumentsTypeList.Ptr(); }
+    TypeNode* GetReturnType() const { return m_typeNode.Ptr(); }
     
 private:
     RefPtr<TypeNode> m_typeNode;
@@ -251,6 +281,8 @@ public:
         , m_nodes(nodes)
     {
     }
+    
+    virtual bool IsStructNode() const { return true; }
     
     virtual std::string ToString() const;
     
@@ -270,7 +302,12 @@ public:
     {
     }
     
+    virtual bool IsVarStatement() const { return true; }
+    
     virtual std::string ToString() const;
+    
+    TypeNode* GetTypeNode() const { return m_typeNode.Ptr(); }
+    IdentifierNode* Identifier() const { return m_nameIdentifier.Ptr(); }
     
 private:
     RefPtr<TypeNode> m_typeNode;
@@ -287,6 +324,8 @@ public:
     }
     
     virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
     
 private:
     RefPtr<ArenaNode> m_expression;

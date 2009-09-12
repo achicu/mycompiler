@@ -9,6 +9,8 @@
 #include "Nodes.h"
 #include <string>
 #include <sstream>
+#include "ByteCodeGenerator.h"
+#include "OpCodes.h"
 
 // ============= FloatValueNode =============
 
@@ -24,6 +26,17 @@ std::string FloatValueNode::ToString() const
 	return o.str();
 }
 
+Register* FloatValueNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    
+    generator->EmitBytecode(op_load_float_constant);
+    generator->EmitRegister(dst);
+    generator->EmitConstantFloat(m_value);
+    
+    return dst;
+}
+
 // ============= IntegerValueNode =============
 
 IntegerValueNode::IntegerValueNode(int value)
@@ -36,8 +49,19 @@ std::string IntegerValueNode::ToString() const
     std::ostringstream o;
     o << "(" << m_value << ' ' << LocationToString() << ")";
 	return o.str();
-
 }
+
+Register* IntegerValueNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    
+    generator->EmitBytecode(op_load_int_constant);
+    generator->EmitRegister(dst);
+    generator->EmitConstantInt(m_value);
+    
+    return dst;
+}
+
 
 // ============= StringValueNode =============
 
@@ -51,6 +75,17 @@ std::string StringValueNode::ToString() const
     std::ostringstream o;
     o << "(\"" << m_value << "\" " << LocationToString() << ")";
 	return o.str();
+}
+
+Register* StringValueNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    
+    generator->EmitBytecode(op_load_string_constant);
+    generator->EmitRegister(dst);
+    generator->EmitConstantString(m_value);
+    
+    return dst;
 }
 
 // ============= IdentifierNode =============
@@ -122,6 +157,43 @@ std::string BinaryOpNode::ToString() const
     o << ")";
     
     return o.str();
+}
+
+Register* BinaryOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    assert(m_node1.Ptr());
+    assert(m_node2.Ptr());
+    
+    RefPtr<Register> reg1 = generator->NewTempRegister();
+    m_node1->EmitBytecode(generator, reg1.Ptr());
+    
+    RefPtr<Register> reg2 = generator->NewTempRegister();
+    m_node2->EmitBytecode(generator, reg2.Ptr());
+    
+    switch(m_op)
+    {
+        case '+':
+            generator->EmitBytecode(op_plus);
+        break;
+        case '*':
+            generator->EmitBytecode(op_multiply);
+        break;
+        case '-':
+            generator->EmitBytecode(op_minus);
+        break;
+        case '\\':
+            generator->EmitBytecode(op_divide);
+        break;
+        default:
+            assert(false);
+    }
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(reg1.Ptr());
+    generator->EmitRegister(reg2.Ptr());
+    
+    return dst;
 }
 
 // ============ AssignNode ============
@@ -260,15 +332,39 @@ std::string TypeNode::ToString() const
     std::ostringstream o;
     o << "[TypeNode ";
 
-    if (m_typeIdentifier.Ptr())
-        o << m_typeIdentifier->ToString() << " ";
+    assert(m_typeIdentifier.Ptr());
+    o << m_typeIdentifier->ToString() << " ";
     
-    if (m_identifierList.Ptr())
-        o << m_identifierList->ToString();
+    if (m_typeNodeList.Ptr())
+        o << m_typeNodeList->ToString();
     
     o << " " << LocationToString();
     
     o << "]";
+    
+    return o.str();
+}
+
+std::string TypeNode::CompleteTypeName() const
+{
+    std::ostringstream o;
+
+    assert(m_typeIdentifier.Ptr());
+    
+    o << m_typeIdentifier->Value();
+    
+    if (m_typeNodeList.Ptr())
+    {
+        o << "<";
+        for (int i=0; i<m_typeNodeList->size(); ++i)
+        {
+            assert(m_typeNodeList->at(i).Ptr());
+            if (i != 0)
+                o << ", ";
+            o << m_typeNodeList->at(i)->CompleteTypeName();
+        }
+        o << ">";
+    }
     
     return o.str();
 }
@@ -310,3 +406,14 @@ std::string ExpressionStatement::ToString() const
     return o.str();
 }
 
+Register* ExpressionStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(m_expression.Ptr());
+    
+    if (!dst)
+        dst = generator->NewTempRegister().Ptr();
+    
+    m_expression->EmitBytecode(generator, dst);
+    
+    return dst;
+}

@@ -138,15 +138,15 @@ LeftSide:
 ;
 
 MultiplyExpression:
-  PlusExpression
-| PlusExpression MULTIPLY MultiplyExpression    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
-| PlusExpression DIVIDE MultiplyExpression      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
+  Literal
+| MultiplyExpression MULTIPLY Literal    { $$ = new BinaryOpNode('*', $1, $3); DBG($$, @1, @3); }
+| MultiplyExpression DIVIDE Literal      { $$ = new BinaryOpNode('/', $1, $3); DBG($$, @1, @3); }
 ;
 
 PlusExpression:
-  Literal
-| Literal PLUS PlusExpression   { $$ = new BinaryOpNode('+', $1, $3); DBG($$, @1, @3); }
-| Literal MINUS PlusExpression  { $$ = new BinaryOpNode('-', $1, $3); DBG($$, @1, @3); }
+  MultiplyExpression
+| PlusExpression PLUS MultiplyExpression    { $$ = new BinaryOpNode('+', $1, $3); DBG($$, @1, @3); }
+| PlusExpression MINUS MultiplyExpression   { $$ = new BinaryOpNode('-', $1, $3); DBG($$, @1, @3); }
 ;
 
 Identifier:
@@ -169,7 +169,7 @@ CallExpression:
 
 Expression:
   CallExpression    { $$ = $1; DBG($$, @1, @1); }
-| MultiplyExpression
+| PlusExpression
 ;
 
 ExpressionStatement:

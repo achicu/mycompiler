@@ -23,9 +23,9 @@ vector main()
 }
 
 
-10 + 5;
+10 + 5 + 10 * 20;
 number t = 10 + 5;
-number t = ( 10 + t ) * ( t + 2 * t ) / 4 + 2;
+number t1 = ( 10 + t ) * ( t + 2 * t ) / 4 + 2;
 
 println('testing st\'rings');
 println("testing st\"rings");

@@ -11,6 +11,8 @@
 		504FBDDB1058C9F10069DD2C /* ParserArena.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FBDDA1058C9F10069DD2C /* ParserArena.cpp */; };
 		504FBDED1058CE600069DD2C /* Nodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FBDEC1058CE600069DD2C /* Nodes.cpp */; };
 		504FBEC8105986EE0069DD2C /* parser.y in Sources */ = {isa = PBXBuildFile; fileRef = 504FBC8E10582DFB0069DD2C /* parser.y */; };
+		504FC2D6105ABA400069DD2C /* BytecodeGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FC2D5105ABA400069DD2C /* BytecodeGenerator.cpp */; };
+		504FC4BA105B9C510069DD2C /* Disassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FC4B9105B9C510069DD2C /* Disassembler.cpp */; };
 		8DD76F650486A84900D96B5E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* main.cpp */; settings = {ATTRIBUTES = (); }; };
 		8DD76F6A0486A84900D96B5E /* lex.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = C6859E8B029090EE04C91782 /* lex.1 */; };
 /* End PBXBuildFile section */
@@ -62,6 +64,12 @@
 		504FBDDC1058CB5D0069DD2C /* RefPtr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RefPtr.h; sourceTree = "<group>"; };
 		504FBDEB1058CE600069DD2C /* Nodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Nodes.h; sourceTree = "<group>"; };
 		504FBDEC1058CE600069DD2C /* Nodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Nodes.cpp; sourceTree = "<group>"; };
+		504FC2D4105ABA400069DD2C /* BytecodeGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BytecodeGenerator.h; sourceTree = "<group>"; };
+		504FC2D5105ABA400069DD2C /* BytecodeGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BytecodeGenerator.cpp; sourceTree = "<group>"; };
+		504FC2D7105ABA7D0069DD2C /* RefCounted.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RefCounted.h; sourceTree = "<group>"; };
+		504FC40A105B90870069DD2C /* OpCodes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpCodes.h; sourceTree = "<group>"; };
+		504FC4B8105B9C510069DD2C /* Disassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Disassembler.h; sourceTree = "<group>"; };
+		504FC4B9105B9C510069DD2C /* Disassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Disassembler.cpp; sourceTree = "<group>"; };
 		8DD76F6C0486A84900D96B5E /* lex */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = lex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6859E8B029090EE04C91782 /* lex.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = lex.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -99,6 +107,12 @@
 				504FBDDC1058CB5D0069DD2C /* RefPtr.h */,
 				504FBDEB1058CE600069DD2C /* Nodes.h */,
 				504FBDEC1058CE600069DD2C /* Nodes.cpp */,
+				504FC2D4105ABA400069DD2C /* BytecodeGenerator.h */,
+				504FC2D5105ABA400069DD2C /* BytecodeGenerator.cpp */,
+				504FC2D7105ABA7D0069DD2C /* RefCounted.h */,
+				504FC40A105B90870069DD2C /* OpCodes.h */,
+				504FC4B8105B9C510069DD2C /* Disassembler.h */,
+				504FC4B9105B9C510069DD2C /* Disassembler.cpp */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -169,6 +183,8 @@
 				504FBB6F105824010069DD2C /* lex.l in Sources */,
 				504FBDDB1058C9F10069DD2C /* ParserArena.cpp in Sources */,
 				504FBDED1058CE600069DD2C /* Nodes.cpp in Sources */,
+				504FC2D6105ABA400069DD2C /* BytecodeGenerator.cpp in Sources */,
+				504FC4BA105B9C510069DD2C /* Disassembler.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

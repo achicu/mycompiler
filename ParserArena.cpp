@@ -13,26 +13,32 @@
 Arena* Arena::s_active = 0;
 
 ArenaNode::ArenaNode()
-    : m_refCount (1)
+    : m_line(0)
+    , m_endLine(0)
     , m_start(0)
     , m_end(0)
 { 
     Arena::Active()->RegisterNode(this); 
 }
 
+Register* ArenaNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    // should not be here
+    //assert(false);
+    return 0;
+}
+
 void Arena::RegisterNode(ArenaNode* ptr)
 {
     assert(ptr->HasOneRef());
-    m_nodes.push_back(RefPtr<ArenaNode>::AdoptRef(ptr));
+    push_back(AdoptRef(ptr));
 }
 
 std::string ArenaNode::LocationToString() const
 {
     std::ostringstream o;
     o << '[' << m_line << " to " << m_endLine << " [" << m_start << ':' << m_end << ']';
-    
     return o.str();
-
 }
 
 std::string ArenaNode::ToString() const

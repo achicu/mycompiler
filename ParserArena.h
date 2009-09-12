@@ -11,38 +11,19 @@
 
 #include <vector>
 #include <assert.h>
+#include "RefCounted.h"
 #include "RefPtr.h"
 
-class ArenaNode
+class BytecodeGenerator;
+class Register;
+
+class ArenaNode: public RefCounted
 {
 public:
     ArenaNode();
-    virtual ~ArenaNode() {
-        assert(m_refCount == 0);
-    }
-    
-    void Ref()
-    {
-        ++m_refCount;
-    }
-    
-    int Deref()
-    {
-        if (--m_refCount != 0)
-        {
-            return m_refCount;
-        }
-        
-        delete this;
-        return 0;
-    }
     
     std::string LocationToString() const;
     virtual std::string ToString() const;
-    
-#ifndef NDEBUG
-    bool HasOneRef() const { return m_refCount == 1; }
-#endif
 
     void SetLocation(int line, int endLine, int start, int end)
     {
@@ -57,15 +38,16 @@ public:
     int Start() const { return m_start; }
     int End() const { return m_end; }
 
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+
 private:
-    int m_refCount;
     int m_line;
     int m_endLine;
     int m_start;
     int m_end;
 };
 
-class Arena
+class Arena: public std::vector< RefPtr<ArenaNode> >
 {
 public:
     Arena() { m_oldActive = s_active; s_active = this; }
@@ -79,7 +61,6 @@ public:
     ArenaNode* Result() const { return m_result.Ptr(); }
     
 private:
-    std::vector< RefPtr<ArenaNode> > m_nodes;
     static Arena* s_active;
     Arena* m_oldActive;
     RefPtr<ArenaNode> m_result;
