@@ -36,11 +36,19 @@ Register* ParentPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Registe
     generator->EmitConstantInt(m_scopeNumber);
     generator->EmitConstantInt(m_registerNumber);
     
+    dst->SetType(GetType());
+    
     return dst;
 }
 
 Register* ParentPropertyAccessor::EmitSave(BytecodeGenerator* generator, Register* src, Register* dst)
 {
+    if (src->GetType() != GetType())
+    {
+        printf("invalid type\n");
+        exit(1);
+    }
+
     generator->EmitBytecode(op_save_scope);
     generator->EmitRegister(src);
     generator->EmitConstantInt(m_scopeNumber);

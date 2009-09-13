@@ -246,9 +246,14 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         
         OPCODE(op_save_scope)
+            //fixme: this only works for one global scope
+            RegisterValue* globalRegister = globalData->GetRegisterFile()->GetBlock();
+            globalRegister[V(2).ConstantInt] = R(1);
         NEXT()
         
         OPCODE(op_load_scope)
+            RegisterValue* globalRegister = globalData->GetRegisterFile()->GetBlock();
+            R(1) = globalRegister[V(2).ConstantInt];
         NEXT()
         
         OPCODE(op_call_method)
