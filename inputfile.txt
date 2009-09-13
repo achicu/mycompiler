@@ -31,3 +31,10 @@ int aduna(int a, int b)
 debug aduna(10, 10);
 
 debug master;
+
+method test10()
+{
+	
+}
+
+test10();

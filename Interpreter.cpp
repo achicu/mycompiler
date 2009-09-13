@@ -30,9 +30,37 @@ public:
     std::string Value;
 };
 
+static const int maximumReentrancy = 10000;
+
+class ReentrancyCheck
+{
+public:
+    ReentrancyCheck()
+    {
+        ++ s_reentrancy;
+    }
+    ~ReentrancyCheck()
+    {
+        -- s_reentrancy;
+    }
+    
+    bool CanEnter() const { return s_reentrancy < maximumReentrancy; }
+    
+private:
+    static int s_reentrancy;
+};
+
+int ReentrancyCheck::s_reentrancy = 0;
 
 void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Bytecode>* buffer)
 {
+    ReentrancyCheck checker;
+    if (!checker.CanEnter())
+    {
+        printf("stack overflow\n");
+        exit(1);
+    }
+
     static BytecodeMetaData bytecodeList[op_last];
     static bool initialized = false;
     if (!initialized)

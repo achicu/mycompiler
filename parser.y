@@ -234,6 +234,7 @@ ExpressionStatement:
 
 MethodNode:
   TypeDeclaration Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = new MethodNode($1, $2, $4, $7 ); DBG($$, @1, @8); }
+| METHOD Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START BRACKET_END   { $$ = new MethodNode(0, $2, $4, 0 ); DBG($$, @1, @7); }
 | METHOD Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = new MethodNode(0, $2, $4, $7 ); DBG($$, @1, @8); }
 ;
 
