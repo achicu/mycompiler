@@ -36,6 +36,10 @@ public:
     RefObject(int size)
         : Value(size)
     {
+        for(int i=0; i<size; ++i)
+        {
+            Value.at(i).asReference = 0;
+        }
     }
     
     std::vector<RegisterValue> Value;
