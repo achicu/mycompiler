@@ -15,10 +15,13 @@
 #include "RefCounted.h"
 #include "RefPtr.h"
 #include "Nodes.h"
+#include "RegisterFile.h"
 
 class BytecodeGenerator;
 class Type;
 class MethodEnv;
+
+typedef std::vector<RefPtr<Type> > TypeList;
 
 class Register : public RefCounted
 {
@@ -69,7 +72,7 @@ public:
 
 private:
     std::string m_name;
-    std::vector<RefPtr<Type> > m_templateTypes;
+    TypeList m_templateTypes;
 };
 
 class BuiltinType: public Type
@@ -251,7 +254,7 @@ public:
     GlobalData();
     
     Type* GetTypeOf(TypeNode* typeNode);
-    MethodEnv* GetMethod(std::string name);
+    MethodEnv* GetMethod(std::string name, MethodNode* methodNode = 0);
     
     int GetConstantFloatIndex(double d);
     int GetConstantStringIndex(std::string d);
@@ -264,6 +267,9 @@ public:
     double GetConstantFloat(int i);
     std::string GetConstantString(int i);
     
+    RegisterFile* GetRegisterFile() { return &m_registerFile; }
+    
+    
 private:
     TypeList m_typeList;
     MethodList m_methodList;
@@ -275,33 +281,42 @@ private:
     RefPtr<FloatType> m_floatType;
     RefPtr<StringType> m_stringType;
 //    RefPtr<VectorType> m_vectorType;
+
+    RegisterFile m_registerFile;
     
 };
 
 class MethodEnv: public RefCounted
 {
 public:
-    MethodEnv()
-        : m_compiled(false)
+    MethodEnv(GlobalData* globalData)
+        : m_globalData(globalData)
         , m_registerCount(0)
+        , m_compiled(false)
     {
     }
     
-    void Compiled(GlobalData* globalData, int registerCount, std::vector<Bytecode>& bytes)
+    void Compiled(int registerCount, std::vector<Bytecode>& bytes)
     {
         m_compiled = true;
-        m_globalData = globalData;
         m_registerCount = registerCount;
         m_bytes = bytes;
     }
     
-    void Run();
+    void Run(RegisterValue* startingRegister);
+    
+    Type* GetReturnType() const { return m_returnType.Ptr(); }
+    const TypeList* GetArgumentsType() const { return &m_argumentsType; }
+    
+    void PrependArgumentsFromMethodNode(MethodNode* method);
 
 private:
-    bool m_compiled;
-    RefPtr<GlobalData> m_globalData;
-    int m_registerCount;
     std::vector<Bytecode> m_bytes;
+    RefPtr<GlobalData> m_globalData;
+    RefPtr<Type> m_returnType;
+    TypeList m_argumentsType;
+    int m_registerCount;
+    bool m_compiled;
 };
 
 class BytecodeGenerator
@@ -330,7 +345,7 @@ public:
     void EmitConstantInt(int value);
     void EmitConstantString(std::string value);
     
-    PassRef<Accessor> GetProperty(std::string& name);
+    PassRef<Accessor> GetProperty(std::string& name, bool onlyLocal = false);
     
     void CoerceInPlace(Register* reg, Type* otherType);
     

@@ -53,7 +53,7 @@
     MACRO(op_float_not, "rr", 2) \
     MACRO(op_load_scope, "rii", 3) \
     MACRO(op_save_scope, "rii", 3) \
-    MACRO(op_call_method, "s", 1) \
+    MACRO(op_call_method, "rs", 2) \
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,
 enum OpCode

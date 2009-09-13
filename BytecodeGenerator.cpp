@@ -468,7 +468,7 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
     return type.Ptr();
 }
 
-MethodEnv* GlobalData::GetMethod(std::string name)
+MethodEnv* GlobalData::GetMethod(std::string name, MethodNode* methodNode)
 {
     MethodList::const_iterator iter = m_methodList.find( name );
     if (iter != m_methodList.end())
@@ -476,7 +476,11 @@ MethodEnv* GlobalData::GetMethod(std::string name)
         return (*iter).second.Ptr();
     }
     
-    RefPtr<MethodEnv> method (AdoptRef( new MethodEnv() ));
+    RefPtr<MethodEnv> method (AdoptRef( new MethodEnv(this) ));
+    if (methodNode)
+    {
+        method->PrependArgumentsFromMethodNode(methodNode);
+    }
     
     m_methodList[name] = method;
     
@@ -522,7 +526,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
 {
     assert(method);
     
-    m_methodEnv = globalData->GetMethod(method->Identifier()->Value());
+    m_methodEnv = globalData->GetMethod(method->Identifier()->Value(), method);
     
     m_localScope.AdoptRef(new Scope(parentScope));
     
@@ -651,8 +655,11 @@ void BytecodeGenerator::DeclareArguments(MethodNode* method)
     }
 }
 
-PassRef<Accessor> BytecodeGenerator::GetProperty(std::string& name)
+PassRef<Accessor> BytecodeGenerator::GetProperty(std::string& name, bool onlyLocal)
 {
+    if (onlyLocal && !m_localScope->HasLocalProperty(name))
+        return 0;
+    
     return m_localScope->GetProperty(name);
 }
 
@@ -715,7 +722,7 @@ void BytecodeGenerator::Generate()
             EmitDecRef(reg);
     }
 
-    m_methodEnv->Compiled(m_globalData.Ptr(), m_maxRegisterCount, m_bytes);
+    m_methodEnv->Compiled(m_maxRegisterCount, m_bytes);
 
     Disassemble(m_globalData.Ptr(), &m_bytes);
 }
@@ -849,10 +856,32 @@ void BytecodeGenerator::PatchConstantInt(int label, int value)
     m_bytes.at(label).ConstantInt = value;
 }
 
-void MethodEnv::Run()
+void MethodEnv::Run(RegisterValue* startingRegister)
 {
     if (!m_compiled)
         printf("the method is not compiled \n");
+        
+    if (!m_globalData->GetRegisterFile()->CanGrow(startingRegister + m_registerCount))
+    {
+        printf("if I enter this functon I will get a stack overflow\n");
+        exit(1);
+    }
     
-    Interpret(m_globalData.Ptr(), m_registerCount, &m_bytes);
+    Interpret(m_globalData.Ptr(), startingRegister, &m_bytes);
+}
+
+void MethodEnv::PrependArgumentsFromMethodNode(MethodNode* method)
+{
+    TypeNode* returnTypeNode = method->GetReturnType();
+    if (returnTypeNode)
+        m_returnType = m_globalData->GetTypeOf(returnTypeNode);
+    
+    ArgumentNodeList* argumentNodeList = method->GetArgumentNodeList();
+    if (argumentNodeList)
+    {
+        for (int i=0; i<argumentNodeList->size(); ++i)
+        {
+            m_argumentsType.push_back(m_globalData->GetTypeOf(argumentNodeList->at(i)->Type()));
+        }
+    }
 }

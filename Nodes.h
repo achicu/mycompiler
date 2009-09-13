@@ -412,6 +412,22 @@ private:
     RefPtr<ArenaNode> m_expression;
 };
 
+class ReturnStatement: public StatementNode
+{
+public:
+    ReturnStatement(ArenaNode* expression)
+        : m_expression(expression)
+    {
+    }
+    
+    virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
+private:
+    RefPtr<ArenaNode> m_expression;
+};
+
 class DebugStatement: public StatementNode
 {
 public:

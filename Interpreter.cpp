@@ -19,13 +19,6 @@ struct BytecodeMetaData
     int length;
 };
 
-union RegisterValues
-{
-    int asInt;
-    double asFloat;
-    RefCounted* asReference;
-};
-
 class RefString: public RefCounted
 {
 public:
@@ -37,27 +30,8 @@ public:
     std::string Value;
 };
 
-class RegisterBook
-{
-public:
-    RegisterBook(int size)
-    {
-        m_block = new RegisterValues[size];
-        memset(m_block, 0, size*sizeof(m_block[0]));
-    }
-    
-    ~RegisterBook()
-    {
-        delete [] m_block;
-    }
-    
-    RegisterValues* GetBlock() const { return m_block; }
 
-private:
-    RegisterValues* m_block;
-};
-
-void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>* buffer)
+void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Bytecode>* buffer)
 {
     static BytecodeMetaData bytecodeList[op_last];
     static bool initialized = false;
@@ -95,9 +69,6 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
     #define V(j) (buffer->at(vPC + j))
     #define RAT(j) (registers[j])
     #define R(j) (RAT(V(j).RegisterNumber))
-    
-    RegisterBook registerBook(registersCount);
-    RegisterValues* registers = registerBook.GetBlock();
     
     int vPCNext=0;
     int vPC = 0;
@@ -281,8 +252,8 @@ void Interpret(GlobalData* globalData, int registersCount, std::vector<Bytecode>
         NEXT()
         
         OPCODE(op_call_method)
-            MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(1).ConstantStringIndex));
-            methodEnv->Run();
+            MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(2).ConstantStringIndex));
+            methodEnv->Run(&R(1));
         NEXT()
         
 finished:

@@ -20,3 +20,10 @@ method test2()
 test();
 test2();
 test();
+
+int test3()
+{
+	return 10;
+}
+
+debug test3();

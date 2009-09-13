@@ -14,7 +14,16 @@
 union Bytecode;
 class GlobalData;
 
-void Interpret(GlobalData* globalData, int registers, std::vector<Bytecode>* buffer);
+class RefCounted;
+
+union RegisterValue
+{
+    int asInt;
+    double asFloat;
+    RefCounted* asReference;
+};
+
+void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Bytecode>* buffer);
 
  
 #endif // INTERPRETER_H

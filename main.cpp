@@ -87,7 +87,7 @@ int main (int argc, char * const argv[]) {
             BytecodeGenerator generator(globalData.Ptr(), static_cast<StatementList*> (result.Ptr()));
             generator.Generate();
             RefPtr<MethodEnv> methodEnv = generator.GetMethodEnv();
-            methodEnv->Run();
+            methodEnv->Run(globalData->GetRegisterFile()->GetBlock());
         }
         fclose(inputFile);
     }

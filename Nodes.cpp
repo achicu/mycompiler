@@ -165,7 +165,18 @@ std::string CallNode::ToString() const
 
 Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
+    // this where the result will come (if we have one), otherwise it will be start of the next function frame
+    RefPtr<Register> reg (generator->NewTempRegister());
+
+    MethodEnv* methodEnv = generator->GetGlobalData()->GetMethod(m_name->Value());
+    if (methodEnv->GetReturnType())
+    {
+        reg->SetType(methodEnv->GetReturnType());
+        dst = reg.Ptr();
+    }
+    
     generator->EmitBytecode(op_call_method);
+    generator->EmitRegister(reg.Ptr());
     generator->EmitConstantString(m_name->Value());
     
     return dst;
@@ -581,7 +592,50 @@ Register* ExpressionStatement::EmitBytecode(BytecodeGenerator* generator, Regist
     return m_expression->EmitBytecode(generator, dst);
 }
 
-// ============ ExpressionStatement ============
+// ============ ReturnStatement ============
+
+std::string ReturnStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[ReturnStatement ";
+
+    if (m_expression.Ptr())
+        o << m_expression->ToString();
+        
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+Register* ReturnStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    if (m_expression.Ptr())
+    {
+        RefPtr<Register> reg = generator->NewTempRegister();
+        reg = m_expression->EmitBytecode(generator, reg.Ptr());
+        
+        static std::string returnValue("$ReturnValue");
+        RefPtr<Accessor> returnValueAccessor = generator->GetProperty(returnValue, true);
+        if (!returnValueAccessor.Ptr())
+        {
+            printf("No return type defined\n");
+            exit(1);
+        }
+        
+        if (returnValueAccessor->GetType() != reg->GetType())
+        {
+            generator->CoerceInPlace(reg.Ptr(), returnValueAccessor->GetType());
+        }
+        
+        returnValueAccessor->EmitSave(generator, reg.Ptr(), 0);
+    }
+    
+    return dst;
+}
+
+// ============ DebugStatement ============
 
 std::string DebugStatement::ToString() const
 {

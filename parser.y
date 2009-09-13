@@ -269,8 +269,8 @@ VariableDeclarationStatement:
 ;
 
 ReturnStatement:
-  RETURN_TOKEN SEMICOLON    { $$ = 0; /*fixme*/ }
-| RETURN_TOKEN Expression SEMICOLON { $$ = 0; }
+  RETURN_TOKEN SEMICOLON            { $$ = new ReturnStatement( 0 ); DBG($$, @1, @2); }
+| RETURN_TOKEN Expression SEMICOLON { $$ = new ReturnStatement( $2 ); DBG($$, @1, @3); }
 ;
 
 %%
