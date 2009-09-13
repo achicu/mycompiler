@@ -56,7 +56,9 @@
     MACRO(op_call_method, "rs", 2) \
     MACRO(op_init_object, "ri", 2) \
     MACRO(op_load_object_property, "rri", 3) \
-    MACRO(op_save_object_property, "rri", 3)
+    MACRO(op_save_object_property, "rri", 3) \
+    MACRO(op_load_object_property_reference, "rri", 3) \
+    MACRO(op_save_object_property_reference, "rri", 3)
     
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,

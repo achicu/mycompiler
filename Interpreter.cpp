@@ -313,6 +313,31 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             if (R(2).asReference)
                 static_cast<RefObject*>(R(1).asReference)->Value.at(V(3).ConstantInt) = R(2);
         NEXT()
+        OPCODE(op_load_object_property_reference)
+            if (R(2).asReference)
+            {
+                RegisterValue value = static_cast<RefObject*>(R(2).asReference)->Value.at(V(3).ConstantInt);
+                if (value.asReference)
+                    value.asReference->Ref();
+                R(1) = value;
+            }
+        NEXT()
+        OPCODE(op_save_object_property_reference)
+            if (R(2).asReference)
+            {
+                RegisterValue& objectValue = static_cast<RefObject*>(R(1).asReference)->Value.at(V(3).ConstantInt);
+                RegisterValue newValue = R(2);
+                
+                if (newValue.asReference)
+                    newValue.asReference->Ref();
+
+                if (objectValue.asReference)
+                    objectValue.asReference->Deref();
+                    
+                objectValue = newValue;
+            }
+        NEXT()
+
         
 finished:
         return;

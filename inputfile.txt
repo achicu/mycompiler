@@ -15,3 +15,8 @@ debug t1.a;
 debug t2.a;
 
 debug t1.a + t2.a;
+
+t1.b = 10.2;
+t2.c = " lei";
+
+debug t1.b + t2.c;

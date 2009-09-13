@@ -282,7 +282,7 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
     {
         // reverse if cannot do it
-        return type2->EmitBinaryOpBytecode(generator, this, op, reg1, reg2, dst);
+        return type2->EmitBinaryOpBytecode(generator, type2, op, reg1, reg2, dst);
     }
     
     assert(reg1->GetType() == reg2->GetType());
@@ -445,7 +445,11 @@ Register* ObjectPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Registe
 {
     if (!dst) dst = generator->NewTempRegister().Ptr();
     
-    generator->EmitBytecode(op_load_object_property);
+    if (GetType()->IsRefCounted())
+        generator->EmitBytecode(op_load_object_property_reference);
+    else
+        generator->EmitBytecode(op_load_object_property);
+    
     generator->EmitRegister(dst);
     generator->EmitRegister(m_register.Ptr());
     generator->EmitConstantInt(m_offset);
@@ -462,8 +466,11 @@ Register* ObjectPropertyAccessor::EmitSave(BytecodeGenerator* generator, Registe
         printf("invalid type\n");
         exit(1);
     }
-
-    generator->EmitBytecode(op_save_object_property);
+    
+    if (GetType()->IsRefCounted())
+        generator->EmitBytecode(op_save_object_property_reference);
+    else
+        generator->EmitBytecode(op_save_object_property);
     generator->EmitRegister(m_register.Ptr());
     generator->EmitRegister(src);
     generator->EmitConstantInt(m_offset);
