@@ -21,9 +21,9 @@ test();
 test2();
 test();
 
-int test3()
+int aduna(int a, int b)
 {
-	return 10;
+	return a + b;
 }
 
-debug test3();
+debug aduna(aduna(10, 20), aduna(20, 30));

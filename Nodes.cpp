@@ -169,10 +169,57 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     RefPtr<Register> reg (generator->NewTempRegister());
 
     MethodEnv* methodEnv = generator->GetGlobalData()->GetMethod(m_name->Value());
+    
     if (methodEnv->GetReturnType())
     {
         reg->SetType(methodEnv->GetReturnType());
         dst = reg.Ptr();
+    }
+    
+    const TypeList* typeList = methodEnv->GetArgumentsType();
+    if (typeList->size() > 0 && ((!m_arguments.Ptr()) || (m_arguments->size() != typeList->size())))
+    {
+        printf("invalid arguments count");
+        exit(1);
+    }
+    
+    if (m_arguments.Ptr())
+    {
+        // create all the registers at once, so that we have them in order
+        std::vector<RefPtr<Register> > argumentRegisters;
+        for (int i=0; i<m_arguments->size(); ++i)
+            argumentRegisters.push_back(generator->NewTempRegister());
+        
+        for (int i=0; i<m_arguments->size(); ++i)
+        {
+            Register* nice_to_have_dst = argumentRegisters.at(i).Ptr();
+            RefPtr<Register> actual_dst = m_arguments->at(i)->EmitBytecode(generator, nice_to_have_dst);
+            if (actual_dst.Ptr() != nice_to_have_dst)
+            {
+                // it returned another register
+                // have to copy it over here
+                generator->EmitBytecode(op_assign);
+                generator->EmitRegister(nice_to_have_dst);
+                generator->EmitRegister(actual_dst.Ptr());
+                nice_to_have_dst->SetType(actual_dst->GetType());
+            }
+            
+            if (nice_to_have_dst->GetType() != typeList->at(i).Ptr())
+            {
+                printf("invalid argument number %d\n", i);
+                exit(1);
+            }
+        }
+        
+        generator->CleanupRegisters();
+    }
+    else
+    {
+        if (typeList->size() > 0)
+        {
+            printf("invalid arguments count");
+            exit(1);
+        }
     }
     
     generator->EmitBytecode(op_call_method);
