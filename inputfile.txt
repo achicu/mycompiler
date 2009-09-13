@@ -35,6 +35,7 @@ debug master;
 method test10()
 {
 	// this is a single line comment
+	debug "test10"; // comment at the end
 }
 
 test10();

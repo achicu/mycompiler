@@ -44,6 +44,7 @@ extern void readNext(char* buf, int& result, int maxSize);
 [ \t]+                  LOCATION_STEP (*yylloc);
 [\n\r]                  LOCATION_LINES (*yylloc, yyleng); LOCATION_STEP (*yylloc);
 \/\/([^\n\r]*)          LOCATION_STEP (*yylloc); // single line comment
+\#([^\n\r]*)            LOCATION_STEP (*yylloc); // single line comment
 \.                      return DOT;
 struct                  return STRUCT;
 extends                 return EXTENDS;
