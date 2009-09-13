@@ -647,6 +647,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
     : m_globalData(globalData)
     , m_statements(method->GetStatementList())
     , m_maxRegisterCount(0)
+    , m_breakOrContinueHelper(0)
 {
     assert(method);
     
@@ -682,6 +683,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
     : m_globalData(globalData)
     , m_statements(statements)
     , m_maxRegisterCount(0)
+    , m_breakOrContinueHelper(0)
 {
     static std::string globalMethodName("$main");
     m_methodEnv = globalData->GetMethod(globalMethodName);
@@ -977,6 +979,22 @@ void BytecodeGenerator::PatchConstantInt(int label, int value)
 {
     assert(label < m_bytes.size());
     m_bytes.at(label).ConstantInt = value;
+}
+
+void BytecodeGenerator::EmitBreak()
+{
+    EmitBytecode(op_jmp);
+    assert(m_breakOrContinueHelper);
+    m_breakOrContinueHelper->PushPatchBreakLabel(GetLabel());
+    EmitConstantInt(0);
+}
+
+void BytecodeGenerator::EmitContinue()
+{
+    EmitBytecode(op_jmp);
+    assert(m_breakOrContinueHelper);
+    m_breakOrContinueHelper->PushPatchContinueLabel(GetLabel());
+    EmitConstantInt(0);
 }
 
 void MethodEnv::Run(RegisterValue* startingRegister)

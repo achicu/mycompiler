@@ -1,22 +1,48 @@
-struct type1
+# struct type1
+# {
+# 	int a;
+# 	number b;
+# 	string c;
+# }
+# 
+# type1 t1;
+# type1 t2;
+# t1.a = 100;
+# t2.a = 200;
+# 
+# 
+# debug t1.a;
+# debug t2.a;
+# 
+# debug t1.a + t2.a;
+# 
+# t1.b = 10.2;
+# t2.c = " lei";
+# 
+# debug t1.b + t2.c;
+
+int tt;
+for(tt=0; tt< 20; ++tt)
 {
-	int a;
-	number b;
-	string c;
+	debug "line";
+	if (tt == 4)
+		continue;
+	debug tt;
+	if (tt > 6)
+		break;
 }
 
-type1 t1;
-type1 t2;
-t1.a = 100;
-t2.a = 200;
+debug "break";
 
-
-debug t1.a;
-debug t2.a;
-
-debug t1.a + t2.a;
-
-t1.b = 10.2;
-t2.c = " lei";
-
-debug t1.b + t2.c;
+tt = 0;
+while (tt < 100)
+{
+	tt ++;
+	if (tt < 10)
+		continue;
+	
+	if (tt > 20)
+		break;
+	
+	debug tt;
+}

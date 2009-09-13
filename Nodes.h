@@ -433,6 +433,28 @@ private:
     RefPtr<ArenaNode> m_expression;
 };
 
+class ContinueStatement: public StatementNode
+{
+public:
+    ContinueStatement()
+    {
+    }
+    
+    virtual std::string ToString() const;
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+};
+
+class BreakStatement: public StatementNode
+{
+public:
+    BreakStatement()
+    {
+    }
+    
+    virtual std::string ToString() const;
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+};
+
 class DebugStatement: public StatementNode
 {
 public:
@@ -487,5 +509,27 @@ private:
     RefPtr<StatementList> m_whileBranch;
 };
 
+class ForStatement: public StatementNode
+{
+public:
+    ForStatement(ArenaNode* expression1, ArenaNode* expression2, ArenaNode* expression3, StatementList* forBranch)
+        : m_expression1(expression1)
+        , m_expression2(expression2)
+        , m_expression3(expression3)
+        , m_forBranch(forBranch)
+    {
+    }
+
+    virtual std::string ToString() const;
+    
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
+private:
+    RefPtr<ArenaNode> m_expression1;
+    RefPtr<ArenaNode> m_expression2;
+    RefPtr<ArenaNode> m_expression3;
+    
+    RefPtr<StatementList> m_forBranch;
+};
 
 #endif // NODES_H

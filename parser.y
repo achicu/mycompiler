@@ -30,7 +30,7 @@ extern char *yytext;
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN MORE_EQUALS
 %token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN D_EQUALS LESS_EQUALS BIT_AND_TOKEN AND_TOKEN BIT_OR_TOKEN OR_TOKEN
-%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN
+%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN CONTINUE_TOKEN BREAK_TOKEN FOR_TOKEN
 
 %left MINUS PLUS
 %left MULTIPLY DIVIDE
@@ -50,13 +50,13 @@ extern char *yytext;
 }
 
 %type <arenaNode> Literal MultiplyExpression Expression PlusExpression LeftSide NegationExpression CompareExpression AssignmentExpression
-%type <arenaNode> PlusPlusOrMinusMinusExpression
+%type <arenaNode> PlusPlusOrMinusMinusExpression ExprOp
 %type <identifierNode> Identifier
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
 %type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement InBlockStatement
 %type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement IfStatement
-%type <statementNode> WhileStatement
+%type <statementNode> WhileStatement ForStatement ContinueStatement BreakStatement
 %type <statementList> GlobalStatementList InMethodStatementList InStructStatementList InBlockStatementList BlockOrStatement
 %type <identifierList> IdentifierList
 %type <typeNodeList> TypeDeclarationList
@@ -121,6 +121,9 @@ InBlockStatement:
 | DebugStatement
 | IfStatement
 | WhileStatement
+| ForStatement
+| ContinueStatement
+| BreakStatement
 ;
 
 BlockOrStatement:
@@ -129,13 +132,30 @@ BlockOrStatement:
 | BRACKET_START InBlockStatementList BRACKET_END  { $$ = $2; DBG($$, @1, @3); }
 ;
 
+ContinueStatement:
+  CONTINUE_TOKEN SEMICOLON      { $$ = new ContinueStatement(); }
+;
+
+BreakStatement:
+  BREAK_TOKEN SEMICOLON         { $$ = new BreakStatement(); }
+;
+
 IfStatement:
   IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement ELSE_TOKEN BlockOrStatement { $$ = new IfStatement($3, $5, $7); DBG($$, @1, @7); }
 | IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement { $$ = new IfStatement($3, $5, 0); DBG($$, @1, @5); }
 ;
 
+ExprOp:
+  /* empty statement */ { $$ = 0; }
+| Expression
+;
+
 WhileStatement:
-  WHILE_TOKEN PARAN_START Expression PARAN_END BlockOrStatement { $$ = new WhileStatement($3, $5); DBG($$, @1, @5); }
+  WHILE_TOKEN PARAN_START ExprOp PARAN_END BlockOrStatement { $$ = new WhileStatement($3, $5); DBG($$, @1, @5); }
+;
+
+ForStatement:
+  FOR_TOKEN PARAN_START ExprOp SEMICOLON ExprOp SEMICOLON ExprOp PARAN_END BlockOrStatement { $$ = new ForStatement($3, $5, $7, $9); DBG($$, @1, @9); }
 ;
 
 DebugStatement:

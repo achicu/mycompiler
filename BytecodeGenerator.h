@@ -391,8 +391,11 @@ private:
     bool m_compiled;
 };
 
+class BreakOrContinueHelper;
+
 class BytecodeGenerator
 {
+    friend class BreakOrContinueHelper;
 public:
 
     BytecodeGenerator(GlobalData* globalData, Scope* parentScope, MethodNode* method);
@@ -429,6 +432,9 @@ public:
     int GetLabel();
     void PatchConstantInt(int label, int value);
     
+    void EmitBreak();
+    void EmitContinue();
+    
     PassRef<MethodEnv> GetMethodEnv();
 
 private:  
@@ -444,6 +450,57 @@ private:
     std::vector<RefPtr<Register> > m_registers;
     int m_calleeRegisters;
     int m_maxRegisterCount;
+    
+    BreakOrContinueHelper* m_breakOrContinueHelper;
+};
+
+class BreakOrContinueHelper
+{
+public:
+    BreakOrContinueHelper(BytecodeGenerator* generator)
+        : m_generator(generator)
+    {
+        m_savedBreakOrContinueHelper = generator->m_breakOrContinueHelper;
+        generator->m_breakOrContinueHelper = this;
+    }
+    
+    ~BreakOrContinueHelper()
+    {
+        Patch();
+        m_generator->m_breakOrContinueHelper = m_savedBreakOrContinueHelper;
+    }
+    
+    void SetContinueLabel(int label) { m_continueLabel = label; }
+    void SetBreakLabel(int label) { m_breakLabel = label; }
+    
+    void PushPatchContinueLabel(int label)
+    {
+        m_continuePatches.push_back(label);
+    }
+    
+    void PushPatchBreakLabel(int label)
+    {
+        m_breakPatches.push_back(label);
+    }
+
+private:
+    void Patch()
+    {
+        for (int i=0; i<m_continuePatches.size(); i++)
+            m_generator->PatchConstantInt(m_continuePatches.at(i), m_continueLabel);
+        
+        for (int i=0; i<m_breakPatches.size(); i++)
+            m_generator->PatchConstantInt(m_breakPatches.at(i), m_breakLabel);
+    }
+    
+    std::vector<int> m_continuePatches;
+    std::vector<int> m_breakPatches;
+    
+    BytecodeGenerator* m_generator;
+    
+    BreakOrContinueHelper* m_savedBreakOrContinueHelper;
+    int m_continueLabel;
+    int m_breakLabel;
 };
 
 #endif // BYTECODEGENERATOR_H
