@@ -1,41 +1,17 @@
-int x = 2;
-debug x;
-x = 3;
-debug x;
-debug x++;
-debug ++x;
-debug x;
-
-method test()
+struct type1
 {
-	debug "just called test method";
-	test2();
+	int a;
+	number b;
+	string c;
 }
 
-method test2()
-{
-	debug "just called test2 method";
-}
+type1 t1;
+type1 t2;
+t1.a = 100;
+t2.a = 200;
 
-test();
-test2();
-test();
 
-int master = 100;
+debug t1.a;
+debug t2.a;
 
-int aduna(int a, int b)
-{
-	return a + b + master --;
-}
-
-debug aduna(10, 10);
-
-debug master;
-
-method test10()
-{
-	// this is a single line comment
-	debug "test10"; // comment at the end
-}
-
-test10();
+debug t1.a + t2.a;

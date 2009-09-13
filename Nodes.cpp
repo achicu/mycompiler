@@ -450,6 +450,39 @@ std::string DotNode::ToString() const
     return o.str();
 }
 
+PassRef<Accessor> DotNode::GetAccessor(BytecodeGenerator* generator)
+{
+    RefPtr<Accessor> accessor = m_node->GetAccessor(generator);
+    if (!accessor.Ptr())
+    {
+        printf("invalid referenced object\n");
+        exit(1);
+    }
+    
+    RefPtr<Register> dst ( generator->NewTempRegister() );
+    dst = accessor->EmitLoad( generator, dst.Ptr() );
+    
+    assert(dst->GetType());
+    if (!dst->GetType()->IsObjectType())
+    {
+        printf("invalid property getter on non object type\n");
+        exit(1);
+    }
+    
+    ObjectType* objectType = static_cast<ObjectType*>(dst->GetType());
+    return objectType->GetPropertyAccessor(m_identifier->Value(), dst.Ptr());
+}
+
+Register* DotNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    
+    PassRef<Accessor> accessor = GetAccessor(generator);
+    dst->SetIgnored();
+    
+    return accessor->EmitLoad(generator, dst);
+}
+
 // ============ ArgumentNode ============
 
 std::string ArgumentNode::ToString() const
@@ -607,6 +640,22 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         }
         
         accessor->EmitSave(generator, initializedValue.Ptr(), 0);
+    }
+    else
+    {
+        PassRef<Accessor> accessor = generator->GetProperty(m_nameIdentifier->Value());
+        assert(accessor.Ptr());
+        
+        if (accessor->GetType()->IsObjectType())
+        {
+            // this will not generate any bytecode
+            RefPtr<Register> valueRegister (accessor->EmitLoad(generator, 0));
+            ObjectType* objectType = static_cast<ObjectType*>(accessor->GetType());
+            
+            generator->EmitBytecode(op_init_object);
+            generator->EmitRegister(valueRegister.Ptr());
+            generator->EmitConstantInt(objectType->GetNextOffset());
+        }
     }
     
     return 0;

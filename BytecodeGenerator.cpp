@@ -441,6 +441,73 @@ Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* t
     return dst;
 }
 
+Register* ObjectPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Register* dst)
+{
+    if (!dst) dst = generator->NewTempRegister().Ptr();
+    
+    generator->EmitBytecode(op_load_object_property);
+    generator->EmitRegister(dst);
+    generator->EmitRegister(m_register.Ptr());
+    generator->EmitConstantInt(m_offset);
+    
+    dst->SetType(GetType());
+    
+    return dst;
+}
+
+Register* ObjectPropertyAccessor::EmitSave(BytecodeGenerator* generator, Register* src, Register* dst)
+{
+    if (src->GetType() != GetType())
+    {
+        printf("invalid type\n");
+        exit(1);
+    }
+
+    generator->EmitBytecode(op_save_object_property);
+    generator->EmitRegister(m_register.Ptr());
+    generator->EmitRegister(src);
+    generator->EmitConstantInt(m_offset);
+    
+    return src;
+}
+
+bool ObjectType::HasProperty(std::string& name)
+{
+    PropertyMap::const_iterator iter = m_properties.find(name);
+    if (iter != m_properties.end())
+        return true;
+    
+    if (m_extendedType.Ptr())
+        return m_extendedType->HasProperty(name);
+    
+    return false;
+}
+
+void ObjectType::PutProperty(std::string& name, Type* type)
+{
+    if (HasProperty(name))
+    {
+        printf("property name already added %s\n", name.c_str());
+        exit(1);
+    }
+    
+    int offset = GetNextOffset();
+    ObjectProperty property( name, type, offset );
+    m_properties.insert(make_pair(name, property));
+}
+
+PassRef<Accessor> ObjectType::GetPropertyAccessor(std::string& name, Register* forReg)
+{
+    PropertyMap::const_iterator iter = m_properties.find(name);
+    if (iter != m_properties.end())
+        return (AdoptRef<Accessor>(new ObjectPropertyAccessor( (*iter).second.GetType(), (*iter).second.GetOffset(), forReg )));
+
+    if (m_extendedType.Ptr())
+        return m_extendedType->GetPropertyAccessor(name, forReg);
+    
+    return false;
+}
+
 GlobalData::GlobalData()
     : m_intType(AdoptRef(new IntType()))
     , m_floatType(AdoptRef(new FloatType()))
@@ -474,6 +541,48 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
     m_typeList[completeName] = type;
     
     return type.Ptr();
+}
+
+void GlobalData::DefineObjectType(StructNode* structNode)
+{
+    std::string completeName = structNode->GetIdentifier()->Value();
+    TypeList::const_iterator iter = m_typeList.find( completeName );
+    if (iter != m_typeList.end())
+    {
+        printf("%s struct already defined\n", completeName.c_str());
+        exit(1);
+    }
+    
+    TypeNode* extendedTypeNode = structNode->GetExtendedType();
+    Type* extendedType = extendedTypeNode ? GetTypeOf(extendedTypeNode) : 0;
+    if (extendedType && !extendedType->IsObjectType())
+    {
+        printf("%s can only extend other structures\n", completeName.c_str());
+        exit(1);
+    }
+    
+    ObjectType* extendedObjectType = extendedType ? static_cast<ObjectType*>(extendedType) : 0;
+    
+    RefPtr<ObjectType> newType (AdoptRef(new ObjectType (completeName, extendedObjectType)));
+    
+    StatementList* statementsList = structNode->GetDeclarations();
+    if (statementsList)
+    {
+        for (int i=0; i<statementsList->size(); ++i)
+        {
+            StatementNode* statement = statementsList->at(i).Ptr();
+            if (!statement)
+                continue; // pass over empty lines
+                
+            if (statement->IsVarStatement())
+            {
+                VarStatement* varStatement = static_cast<VarStatement*>(statement);
+                newType->PutProperty(varStatement->Identifier()->Value(), GetTypeOf(varStatement->GetTypeNode()));
+            }
+        }
+    }
+    
+    m_typeList[completeName] = newType.Ptr();
 }
 
 MethodEnv* GlobalData::GetMethod(std::string name, MethodNode* methodNode)
@@ -586,8 +695,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
         if (statement->IsStructNode())
         {
             StructNode* structNode = static_cast<StructNode*>(statement);
-            (void) structNode;
-            // printf( " struct : %s\n", structNode->ToString().c_str());
+            m_globalData->DefineObjectType(structNode);
         }
         else if (statement->IsVarStatement())
         {

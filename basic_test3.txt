@@ -1,0 +1,41 @@
+int x = 2;
+debug x;
+x = 3;
+debug x;
+debug x++;
+debug ++x;
+debug x;
+
+method test()
+{
+	debug "just called test method";
+	test2();
+}
+
+method test2()
+{
+	debug "just called test2 method";
+}
+
+test();
+test2();
+test();
+
+int master = 100;
+
+int aduna(int a, int b)
+{
+	return a + b + master --;
+}
+
+debug aduna(10, 10);
+
+debug master;
+
+method test10()
+{
+	// this is a single line comment
+	debug "test10"; // comment at the end
+}
+
+test10();

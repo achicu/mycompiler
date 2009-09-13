@@ -217,6 +217,7 @@ Literal:
 | CallExpression    { $$ = $1; DBG($$, @1, @1); }
 | Identifier        { $$ = $1; DBG($$, @1, @1); }
 | PARAN_START Expression PARAN_END  { $$ = $2; DBG($$, @1, @3); }
+| LeftSide
 ;
 
 CallExpression:

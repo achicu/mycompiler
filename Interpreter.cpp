@@ -30,6 +30,17 @@ public:
     std::string Value;
 };
 
+class RefObject: public RefCounted
+{
+public:
+    RefObject(int size)
+        : Value(size)
+    {
+    }
+    
+    std::vector<RegisterValue> Value;
+};
+
 static const int maximumReentrancy = 10000;
 
 class ReentrancyCheck
@@ -287,6 +298,20 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         OPCODE(op_call_method)
             MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(2).ConstantStringIndex));
             methodEnv->Run(&R(1));
+        NEXT()
+        
+        OPCODE(op_init_object)
+            RefObject* refObject = new RefObject(V(2).ConstantInt);
+            R(1).asReference = refObject;
+        NEXT()
+        
+        OPCODE(op_load_object_property)
+            if (R(2).asReference)
+                R(1) = static_cast<RefObject*>(R(2).asReference)->Value.at(V(3).ConstantInt);
+        NEXT()
+        OPCODE(op_save_object_property)
+            if (R(2).asReference)
+                static_cast<RefObject*>(R(1).asReference)->Value.at(V(3).ConstantInt) = R(2);
         NEXT()
         
 finished:

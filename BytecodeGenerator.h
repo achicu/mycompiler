@@ -65,6 +65,7 @@ public:
     
     virtual bool IsBuiltin() const { return false; }
     virtual bool IsRefCounted() const { return false; }
+    virtual bool IsObjectType() const { return false; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst);
@@ -73,6 +74,23 @@ public:
 private:
     std::string m_name;
     TypeList m_templateTypes;
+};
+
+class Accessor: public RefCounted
+{
+public:
+    Accessor(Type* type)
+        : m_type(type)
+    {
+    }
+    
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst) = 0;
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst) = 0;
+    
+    Type* GetType() const { return m_type.Ptr(); }
+
+private:
+    RefPtr<Type> m_type;
 };
 
 class BuiltinType: public Type
@@ -138,6 +156,76 @@ public:
 
 };
 
+class ObjectProperty
+{
+public:
+    ObjectProperty(std::string& name, Type* type, int offset)
+        : m_name(name)
+        , m_type(type)
+        , m_offset(offset)
+    {
+    }
+    
+    int GetOffset() const { return m_offset; }
+
+    std::string Name() const { return m_name; }
+    Type* GetType() const { return m_type.Ptr(); }
+    
+private:
+    std::string m_name;
+    RefPtr<Type> m_type;
+    int m_offset;
+};
+
+class ObjectPropertyAccessor: public Accessor
+{
+public:
+    ObjectPropertyAccessor(Type* type, int offset, Register* forReg)
+        : Accessor(type)
+        , m_register(forReg)
+        , m_offset(offset)
+    {
+    }
+    
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst);
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst);
+
+private:
+    RefPtr<Register> m_register;
+    int m_offset;
+};
+
+class ObjectType: public BuiltinType
+{
+    typedef std::map<std::string, ObjectProperty> PropertyMap;
+public:
+    
+    ObjectType(std::string type, ObjectType* extendedType)
+        : BuiltinType(type)
+        , m_extendedType(extendedType)
+    {
+    }
+    
+    int GetNextOffset() const
+    {
+        if (m_extendedType.Ptr())
+            return m_properties.size() + m_extendedType->GetNextOffset();
+        
+        return m_properties.size();
+    }
+    
+    virtual bool IsObjectType() const { return true; }
+    virtual bool IsRefCounted() const { return true; }
+    
+    void PutProperty(std::string& name, Type* type);
+    bool HasProperty(std::string& name);
+    PassRef<Accessor> GetPropertyAccessor(std::string& name, Register* forReg);
+
+private:
+    RefPtr<ObjectType> m_extendedType;
+    PropertyMap m_properties;
+};
+
 class Property: public RefCounted
 {
 public:
@@ -158,23 +246,6 @@ private:
     RefPtr<Type> m_type;
     RefPtr<Register> m_register;
     
-};
-
-class Accessor: public RefCounted
-{
-public:
-    Accessor(Type* type)
-        : m_type(type)
-    {
-    }
-    
-    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst) = 0;
-    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst) = 0;
-    
-    Type* GetType() const { return m_type.Ptr(); }
-
-private:
-    RefPtr<Type> m_type;
 };
 
 class LocalPropertyAccessor: public Accessor
@@ -269,6 +340,7 @@ public:
     
     RegisterFile* GetRegisterFile() { return &m_registerFile; }
     
+    void DefineObjectType(StructNode* structNode);
     
 private:
     TypeList m_typeList;

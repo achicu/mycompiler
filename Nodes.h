@@ -277,7 +277,8 @@ public:
     
     virtual std::string ToString() const;
     
-
+    virtual PassRef<Accessor> GetAccessor(BytecodeGenerator* generator);
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
     
 private:
     RefPtr<ArenaNode> m_node;
@@ -364,6 +365,10 @@ public:
     virtual bool IsStructNode() const { return true; }
     
     virtual std::string ToString() const;
+    
+    IdentifierNode* GetIdentifier() const { return m_identifier.Ptr(); }
+    TypeNode* GetExtendedType() const { return m_extends.Ptr(); }
+    StatementList* GetDeclarations() const { return m_nodes.Ptr(); }
     
 private:
     RefPtr<IdentifierNode> m_identifier;
