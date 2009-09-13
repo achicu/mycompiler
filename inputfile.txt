@@ -34,7 +34,7 @@ debug master;
 
 method test10()
 {
-	
+	// this is a single line comment
 }
 
 test10();
