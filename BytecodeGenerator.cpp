@@ -504,17 +504,18 @@ void ObjectType::DebugObject(GlobalData* globalData, RefObject* ref)
         {
             o << type->Name() << ":\n";
             
-            PropertyMap::iterator iter = m_properties.begin();
-            for(; iter != m_properties.end(); ++iter)
+            PropertyMap::iterator iter = type->m_properties.begin();
+            for(; iter != type->m_properties.end(); ++iter)
             {
                 o << "\t";
                 ObjectProperty& objectProperty = (*iter).second;
                 Type* const propertyType = objectProperty.GetType();
+                
+                o << '[' << propertyType->Name() << " - " << objectProperty.Name() << "] ";
+                
                 if (propertyType->IsCollectorRef())
                 {
                     CollectorRef* collectorRef = ref->ReadAtOffset<CollectorRef*>(objectProperty.GetOffset());
-                    o << '[' << propertyType->Name() << "] ";
-                    
                     if (propertyType == globalData->GetStringType())
                     {
                         if (collectorRef)
@@ -531,12 +532,12 @@ void ObjectType::DebugObject(GlobalData* globalData, RefObject* ref)
                 else if (propertyType == globalData->GetIntType())
                 {
                     int value = ref->ReadAtOffset<int>(objectProperty.GetOffset());
-                    o << '[' << propertyType->Name() << "] " << value;
+                    o << value;
                 }
                 else if (propertyType == globalData->GetFloatType())
                 {
                     double value = ref->ReadAtOffset<double>(objectProperty.GetOffset());
-                    o << '[' << propertyType->Name() << "] " << value;
+                    o << value;
                 }
                 else
                 {

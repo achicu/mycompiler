@@ -1,11 +1,17 @@
 # int i;
 # int j = 10;
 
-struct vectorstruct
+struct v2
+{
+	string name;
+}
+
+struct vectorstruct extends v2
 {
 	int a;
-	int b;
-	int c;
+	number b;
+	string c;
+	vectorstruct d;
 }
 
 vector.<vectorstruct> vbig = vector.<vectorstruct>(5);
@@ -33,12 +39,20 @@ vector.<vectorstruct> vbig = vector.<vectorstruct>(5);
 # 
 # debug vstring;
 
+vectorstruct v3 = vectorstruct();
+vbig[3] = v3;
+
+v3.name = "dubios cum merge treaba asta " + (10 + 20 / 2 + 30);
+
 vbig[0] = vectorstruct();
 vbig[0].a = 1;
 vbig[0].b = 2;
 vbig[0].c = 3;
+vbig[0].name = "my name is fanel";
 
 debug vbig[0];
 debug vbig;
+
+debug vbig[3];
 
 debug "finished";
