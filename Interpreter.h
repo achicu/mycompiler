@@ -10,11 +10,40 @@
 #define INTERPRETER_H
 
 #include <vector>
+#include "Collector.h"
 
 union Bytecode;
 class GlobalData;
 
 class CollectorRef;
+class ObjectType;
+
+class RefObject: public CollectorRef
+{
+public:
+    RefObject(ObjectType* type);
+    virtual ~RefObject();
+    
+    virtual void Mark();
+    
+    char* Buffer() const { return m_buffer; }
+    
+    template <typename T>
+    T ReadAtOffset(int offset)
+    {
+        return *(reinterpret_cast<T*>(&m_buffer[offset]));
+    }
+    
+    template <typename T>
+    void WriteAtOffset(int offset, T value)
+    {
+        *(reinterpret_cast<T*>(&m_buffer[offset])) = value;
+    }
+    
+private:
+    ObjectType* m_type;
+    char* m_buffer;
+};
 
 union RegisterValue
 {

@@ -17,6 +17,7 @@
 #include "Nodes.h"
 #include "RegisterFile.h"
 #include "Collector.h"
+#include "Interpreter.h"
 
 class BytecodeGenerator;
 class Type;
@@ -107,7 +108,7 @@ public:
     virtual bool IsBuiltin() const { return true; }
 
 protected:
-    bool CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2);
+    bool CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* &reg1, Register* &reg2);
 };
 
 class IntType: public BuiltinType
@@ -204,29 +205,26 @@ public:
     ObjectType(std::string type, ObjectType* extendedType)
         : BuiltinType(type)
         , m_extendedType(extendedType)
+        , m_nextOffset(extendedType ? extendedType->m_nextOffset : 0)
     {
     }
     
-    int GetNextOffset() const
-    {
-        if (m_extendedType.Ptr())
-            return m_properties.size() + m_extendedType->GetNextOffset();
-        
-        return m_properties.size();
-    }
+    int GetNextOffset(int size);
     
     virtual bool IsObjectType() const { return true; }
     virtual bool IsRefCounted() const { return true; }
     
-    void PutProperty(std::string& name, Type* type);
+    void PutProperty(GlobalData* globalData, std::string& name, Type* type);
     bool HasProperty(std::string& name);
     PassRef<Accessor> GetPropertyAccessor(std::string& name, Register* forReg);
     
-    void CreateDestructor(MethodEnv* methodEnv);
+    int ObjectSize();
+    void MarkObject(RefObject* ref);
 
 private:
     RefPtr<ObjectType> m_extendedType;
     PropertyMap m_properties;
+    int m_nextOffset;
 };
 
 class Property: public RefCounted
@@ -328,6 +326,7 @@ public:
     GlobalData();
     virtual ~GlobalData();
     
+    Type* GetDefinedType(std::string completeName);
     Type* GetTypeOf(TypeNode* typeNode);
     MethodEnv* GetMethod(std::string name, MethodNode* methodNode = 0);
     
@@ -431,12 +430,9 @@ public:
     
     PassRef<Accessor> GetProperty(std::string& name, bool onlyLocal = false);
     
-    void CoerceInPlace(Register* reg, Type* otherType);
+    Register* Coerce(Register* reg, Type* otherType);
     
     int GetMaxRegisterCount() const { return m_maxRegisterCount; }
-    
-    void EmitIncRef(Register* reg);
-    void EmitDecRef(Register* reg);
     
     int GetLabel();
     void PatchConstantInt(int label, int value);

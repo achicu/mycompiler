@@ -26,12 +26,12 @@ public:
     RefString(std::string value)
         : Value (value)
     {
-        printf("created RefString %d\n", ++s_instances);
+        printf("created RefString %d \"%s\"\n", ++s_instances, value.c_str());
     }
     
     ~RefString()
     {
-        printf("destroyed RefString %d\n", --s_instances);
+        printf("destroyed RefString %d \"%s\"\n", --s_instances, Value.c_str());
     }
     
     std::string Value;
@@ -42,22 +42,24 @@ private:
 
 int RefString::s_instances = 0;
 
-class RefObject: public CollectorRef
+RefObject::RefObject(ObjectType* type)
+    : m_type(type)
 {
-public:
-    RefObject(int size, MethodEnv* destructor)
-        : Value(size)
-        , Destructor(destructor)
-    {
-        for(int i=0; i<size; ++i)
-        {
-            Value.at(i).asReference = 0;
-        }
-    }
+    int size = type->ObjectSize();
+    m_buffer = new char[size];
+    memset(m_buffer, 0, size);
+}
+
+RefObject::~RefObject()
+{
+    delete [] m_buffer;
+}
     
-    std::vector<RegisterValue> Value;
-    MethodEnv* Destructor;
-};
+void RefObject::Mark()
+{
+    m_type->MarkObject(this);
+    CollectorRef::Mark();
+}
 
 static const int maximumReentrancy = 10000;
 
@@ -224,28 +226,28 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             R(1).asReference = new RefString(static_cast<RefString*>(R(2).asReference)->Value + static_cast<RefString*>(R(3).asReference)->Value);
         NEXT()
         OPCODE(op_coerce_int_float)
-            R(1).asFloat = R(1).asInt;
+            R(1).asFloat = R(2).asInt;
         NEXT()
         OPCODE(op_coerce_int_string)
             std::ostringstream o;
-            o << R(1).asInt;
+            o << R(2).asInt;
             R(1).asReference = new RefString(o.str());
         NEXT()
         OPCODE(op_coerce_float_int)
-            R(1).asInt = (int)R(1).asFloat;
+            R(1).asInt = (int)R(2).asFloat;
         NEXT()
         OPCODE(op_coerce_float_string)
             std::ostringstream o;
-            o << R(1).asFloat;
+            o << R(2).asFloat;
             R(1).asReference = new RefString(o.str());
         NEXT()
         OPCODE(op_coerce_string_int)
-            CollectorRef* ref = R(1).asReference;
+            CollectorRef* ref = R(2).asReference;
             assert (ref);
             R(1).asInt = atoi(static_cast<RefString*>(ref)->Value.c_str());
         NEXT()
         OPCODE(op_coerce_string_float)
-            CollectorRef* ref = R(1).asReference;
+            CollectorRef* ref = R(2).asReference;
             assert (ref);
             R(1).asFloat = atof(static_cast<RefString*>(ref)->Value.c_str());
         NEXT()
@@ -261,21 +263,7 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         OPCODE(op_debug_string)
             printf("%s\n", static_cast<RefString*>(R(1).asReference)->Value.c_str());
         NEXT()
-        OPCODE(op_inc_ref)
-            /*RefCounted* ref = R(1).asReference;
-            assert(ref);
-            ref->Ref();
-            */
-        NEXT()
-        OPCODE(op_dec_ref)
-            /*RefCounted* ref = R(1).asReference;
-            if (ref != 0)
-            {
-                if (ref->HasOneRef())
-                    R(1).asReference = 0;
-                ref->Deref();
-            }*/
-        NEXT()
+
         OPCODE(op_init_ref)
             R(1).asReference = 0;
         NEXT()
@@ -318,42 +306,38 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         
         OPCODE(op_init_object)
-            MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(3).ConstantStringIndex));
-            RefObject* refObject = new RefObject(V(2).ConstantInt, methodEnv);
+            Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(2).ConstantStringIndex));
+            assert(type->IsObjectType());
+            RefObject* refObject = new RefObject(static_cast<ObjectType*>(type));
             R(1).asReference = refObject;
         NEXT()
         
-        OPCODE(op_load_object_property)
-            if (R(2).asReference)
-                R(1) = static_cast<RefObject*>(R(2).asReference)->Value.at(V(3).ConstantInt);
+        OPCODE(op_load_int_object_property)
+            assert (R(2).asReference);
+            R(1).asInt = static_cast<RefObject*>(R(2).asReference)->ReadAtOffset<int>(V(3).ConstantInt);
         NEXT()
-        OPCODE(op_save_object_property)
-            if (R(2).asReference)
-                static_cast<RefObject*>(R(1).asReference)->Value.at(V(3).ConstantInt) = R(2);
+        OPCODE(op_save_int_object_property)
+            assert (R(2).asReference);
+            static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<int>(V(3).ConstantInt, R(2).asInt);
         NEXT()
-        OPCODE(op_load_object_property_reference)
-            if (R(2).asReference)
-            {
-                RegisterValue value = static_cast<RefObject*>(R(2).asReference)->Value.at(V(3).ConstantInt);
-                /*if (value.asReference)
-                    value.asReference->Ref();*/
-                R(1) = value;
-            }
+        
+        OPCODE(op_load_float_object_property)
+            assert (R(2).asReference);
+            R(1).asFloat = static_cast<RefObject*>(R(2).asReference)->ReadAtOffset<double>(V(3).ConstantInt);
         NEXT()
-        OPCODE(op_save_object_property_reference)
-            if (R(2).asReference)
-            {
-                RegisterValue& objectValue = static_cast<RefObject*>(R(1).asReference)->Value.at(V(3).ConstantInt);
-                RegisterValue newValue = R(2);
-                
-                /*if (newValue.asReference)
-                    newValue.asReference->Ref();
-
-                if (objectValue.asReference)
-                    objectValue.asReference->Deref();
-                */
-                objectValue = newValue;
-            }
+        OPCODE(op_save_float_object_property)
+            assert (R(2).asReference);
+            static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<double>(V(3).ConstantInt, R(2).asFloat);
+        NEXT()
+        
+        OPCODE(op_load_ref_object_property)
+            assert (R(2).asReference);
+            R(1).asReference = static_cast<RefObject*>(R(2).asReference)->ReadAtOffset<CollectorRef*>(V(3).ConstantInt);
+        NEXT()
+        
+        OPCODE(op_save_ref_object_property)
+            assert (R(2).asReference);
+            static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<CollectorRef*>(V(3).ConstantInt, R(2).asReference);
         NEXT()
 
         

@@ -97,7 +97,7 @@ Property* Scope::LookupProperty(std::string& name, int& scopeNumber) const
     return 0;
 }
 
-bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2)
+bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* &reg1, Register* &reg2)
 {
     if (type2 != this)
     {
@@ -111,13 +111,13 @@ bool BuiltinType::CoerceArgsIfNeeded(BytecodeGenerator* generator, Type* type2, 
         if (static_cast<BuiltinType*>(type2)->GetPriority() > GetPriority())
         {
             // coerce me to the other
-            generator->CoerceInPlace(reg1, type2);
+            reg1 = generator->Coerce(reg1, type2);
             return false;
         }
         else
         {
             // coerce the other to me
-            generator->CoerceInPlace(reg2, this);
+            reg2 = generator->Coerce(reg2, this);
         }
     }
     
@@ -446,10 +446,12 @@ Register* ObjectPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Registe
     if (!dst) dst = generator->NewTempRegister().Ptr();
     
     if (GetType()->IsRefCounted())
-        generator->EmitBytecode(op_load_object_property_reference);
-    else
-        generator->EmitBytecode(op_load_object_property);
-    
+        generator->EmitBytecode(op_load_ref_object_property);
+    else if (GetType() == generator->GetGlobalData()->GetIntType())
+        generator->EmitBytecode(op_load_int_object_property);
+    else if (GetType() == generator->GetGlobalData()->GetFloatType())
+        generator->EmitBytecode(op_load_float_object_property);
+            
     generator->EmitRegister(dst);
     generator->EmitRegister(m_register.Ptr());
     generator->EmitConstantInt(m_offset);
@@ -468,14 +470,53 @@ Register* ObjectPropertyAccessor::EmitSave(BytecodeGenerator* generator, Registe
     }
     
     if (GetType()->IsRefCounted())
-        generator->EmitBytecode(op_save_object_property_reference);
-    else
-        generator->EmitBytecode(op_save_object_property);
+        generator->EmitBytecode(op_save_ref_object_property);
+    else if (GetType() == generator->GetGlobalData()->GetIntType())
+        generator->EmitBytecode(op_save_int_object_property);
+    else if (GetType() == generator->GetGlobalData()->GetFloatType())
+        generator->EmitBytecode(op_save_float_object_property);
+        
     generator->EmitRegister(m_register.Ptr());
     generator->EmitRegister(src);
     generator->EmitConstantInt(m_offset);
     
     return src;
+}
+
+int ObjectType::ObjectSize()
+{
+    return m_nextOffset; 
+}
+
+void ObjectType::MarkObject(RefObject* ref)
+{
+    ObjectType* type = this;
+    while (type)
+    {
+        PropertyMap::iterator iter = m_properties.begin();
+        for(; iter != m_properties.end(); ++iter)
+        {
+            ObjectProperty& objectProperty = (*iter).second;
+            if (objectProperty.GetType()->IsRefCounted())
+            {
+                CollectorRef* collectorRef = ref->ReadAtOffset<CollectorRef*>(objectProperty.GetOffset());
+                if (collectorRef && !Heap::IsCellMarked(collectorRef))
+                {
+                    collectorRef->Mark();
+                }
+            }
+        }
+
+        type = type->m_extendedType.Ptr();
+    }
+}
+
+int ObjectType::GetNextOffset(int size)
+{
+    // align the new one to the size of the object
+    int returnOffset = m_nextOffset + size - m_nextOffset % size;
+    m_nextOffset = returnOffset + size;
+    return returnOffset;
 }
 
 bool ObjectType::HasProperty(std::string& name)
@@ -490,7 +531,7 @@ bool ObjectType::HasProperty(std::string& name)
     return false;
 }
 
-void ObjectType::PutProperty(std::string& name, Type* type)
+void ObjectType::PutProperty(GlobalData* globalData, std::string& name, Type* type)
 {
     if (HasProperty(name))
     {
@@ -498,7 +539,16 @@ void ObjectType::PutProperty(std::string& name, Type* type)
         exit(1);
     }
     
-    int offset = GetNextOffset();
+    int offset = 0;
+    if ( type->IsRefCounted() )
+        offset = GetNextOffset(sizeof(CollectorCell*));
+    else if (type == globalData->GetIntType())
+        offset = GetNextOffset(sizeof(int));
+    else if (type == globalData->GetFloatType())
+        offset = GetNextOffset(sizeof(float));
+            
+    assert(offset != 0);
+    
     ObjectProperty property( name, type, offset );
     m_properties.insert(make_pair(name, property));
 }
@@ -513,35 +563,6 @@ PassRef<Accessor> ObjectType::GetPropertyAccessor(std::string& name, Register* f
         return m_extendedType->GetPropertyAccessor(name, forReg);
     
     return false;
-}
-
-void ObjectType::CreateDestructor(MethodEnv* methodEnv)
-{
-    BytecodeGenerator generator(methodEnv);
-    RefPtr<Register> objectRegister (generator.NewRegister());
-    objectRegister->SetType(this);
-    
-    RefPtr<Register> iteratorRegister ( generator.NewTempRegister() );
-
-    PropertyMap::iterator iter = m_properties.begin();
-    for(; iter != m_properties.end(); ++iter)
-    {
-        if ((*iter).second.GetType()->IsRefCounted())
-        {
-            generator.EmitBytecode(op_load_object_property);
-            generator.EmitRegister(iteratorRegister.Ptr());
-            generator.EmitRegister(objectRegister.Ptr());
-            generator.EmitConstantInt((*iter).second.GetOffset());
-            
-            generator.EmitBytecode(op_dec_ref);
-            generator.EmitRegister(iteratorRegister.Ptr());
-        }
-    }
-    
-    // the object is already at ref 0, no need to release it
-    objectRegister->SetType(0);
-    
-    generator.FinishMethod();
 }
 
 GlobalData::GlobalData()
@@ -560,6 +581,17 @@ GlobalData::GlobalData()
 GlobalData::~GlobalData()
 {
     printf("~globalData\n");
+}
+
+Type* GlobalData::GetDefinedType(std::string completeName)
+{
+    TypeList::const_iterator iter = m_typeList.find( completeName );
+    if (iter != m_typeList.end())
+    {
+        return (*iter).second.Ptr();
+    }
+    
+    return 0;
 }
 
 Type* GlobalData::GetTypeOf(TypeNode* typeNode)
@@ -619,14 +651,11 @@ void GlobalData::DefineObjectType(StructNode* structNode)
             if (statement->IsVarStatement())
             {
                 VarStatement* varStatement = static_cast<VarStatement*>(statement);
-                newType->PutProperty(varStatement->Identifier()->Value(), GetTypeOf(varStatement->GetTypeNode()));
+                newType->PutProperty(this, varStatement->Identifier()->Value(), GetTypeOf(varStatement->GetTypeNode()));
             }
         }
     }
-    
-    std::string destructorName = std::string("$destroy_") + completeName;
-    newType->CreateDestructor(GetMethod(destructorName));
-    
+        
     m_typeList[completeName] = newType.Ptr();
 }
 
@@ -788,10 +817,6 @@ void BytecodeGenerator::CleanupRegisters()
 {
     while( m_registers.size() > m_calleeRegisters && m_registers.back()->HasOneRef() && m_registers.back()->IsIgnored())
     {
-        Register* reg = m_registers.back().Ptr();
-        if (reg->GetType() && reg->GetType()->IsRefCounted())
-            EmitDecRef(reg);
-        
         m_registers.pop_back();
     }
 }
@@ -892,13 +917,6 @@ void BytecodeGenerator::Generate()
 
 void BytecodeGenerator::FinishMethod()
 {
-    for( int i=0; i<m_registers.size(); ++i )
-    {
-        Register* reg = m_registers.at(i).Ptr();
-        if (reg->GetType() && reg->GetType()->IsRefCounted())
-            EmitDecRef(reg);
-    }
-
     m_methodEnv->Compiled(m_maxRegisterCount, m_bytes);
 
     Disassemble(m_globalData.Ptr(), &m_bytes);
@@ -945,8 +963,10 @@ void BytecodeGenerator::EmitConstantString(std::string value)
     m_bytes.push_back(b);
 }
 
-void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
+Register* BytecodeGenerator::Coerce(Register* reg, Type* otherType)
 {
+    Register* dst = reg->IsIgnored() ? reg : NewTempRegister().Ptr();
+    
     bool converted = false;
     Type* type = reg->GetType();
     assert(type != otherType);
@@ -956,13 +976,11 @@ void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
         if (m_globalData->GetFloatType() == otherType)
         {
             EmitBytecode(op_coerce_int_float);
-            EmitRegister(reg);
             converted = true;
         }
         else if (m_globalData->GetStringType() == otherType)
         {
             EmitBytecode(op_coerce_int_string);
-            EmitRegister(reg);
             converted = true;
         }
     }
@@ -971,13 +989,11 @@ void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
         if (m_globalData->GetIntType() == otherType)
         {
             EmitBytecode(op_coerce_float_int);
-            EmitRegister(reg);
             converted = true;
         }
         else if (m_globalData->GetStringType() == otherType)
         {
             EmitBytecode(op_coerce_float_string);
-            EmitRegister(reg);
             converted = true;
         }
     }
@@ -986,40 +1002,28 @@ void BytecodeGenerator::CoerceInPlace(Register* reg, Type* otherType)
         if (m_globalData->GetIntType() == otherType)
         {
             EmitBytecode(op_coerce_string_int);
-            EmitRegister(reg);
             converted = true;
         }
         else if (m_globalData->GetFloatType() == otherType)
         {
             EmitBytecode(op_coerce_string_float);
-            EmitRegister(reg);
             converted = true;
         }
     }
     
     if (converted)
     {
-        reg->SetType(otherType);
+        EmitRegister(dst);
+        EmitRegister(reg);
+        dst->SetType(otherType);
     }
     else
     {
         printf("Error: unable to coerce %s to %s\n", type->Name().c_str(), otherType->Name().c_str());
         exit(1);
     }
-}
-
-void BytecodeGenerator::EmitIncRef(Register* reg)
-{
-    assert(reg->GetType()->IsRefCounted());
-    EmitBytecode(op_inc_ref);
-    EmitRegister(reg);
-}
-
-void BytecodeGenerator::EmitDecRef(Register* reg)
-{
-    assert(reg->GetType()->IsRefCounted());
-    EmitBytecode(op_dec_ref);
-    EmitRegister(reg);
+    
+    return dst;
 }
 
 int BytecodeGenerator::GetLabel()

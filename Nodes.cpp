@@ -393,19 +393,11 @@ Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     if (accessor->GetType() != reg2->GetType())
     {
-        generator->CoerceInPlace(reg2.Ptr(), accessor->GetType());
+        reg2 = generator->Coerce(reg2.Ptr(), accessor->GetType());
     }
     
     assert(reg2->GetType() == accessor->GetType());
-    
-    if (accessor->GetType()->IsRefCounted())
-    {
-        generator->EmitIncRef(reg2.Ptr()); // increment first
-
-        RefPtr<Register> valueRegister (accessor->EmitLoad(generator, 0));
-        generator->EmitDecRef(valueRegister.Ptr());
-    }
-    
+        
     return accessor->EmitSave(generator, reg2.Ptr(), dst);
 }
 
@@ -628,17 +620,9 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         
         if (accessor->GetType() != initializedValue->GetType())
         {
-            generator->CoerceInPlace(initializedValue.Ptr(), accessor->GetType());
+            initializedValue = generator->Coerce(initializedValue.Ptr(), accessor->GetType());
         }
-        
-        if (accessor->GetType()->IsRefCounted())
-        {
-            generator->EmitIncRef(initializedValue.Ptr());
-            
-            RefPtr<Register> valueRegister (accessor->EmitLoad(generator, 0));
-            generator->EmitDecRef(valueRegister.Ptr());
-        }
-        
+                
         accessor->EmitSave(generator, initializedValue.Ptr(), 0);
     }
     else
@@ -654,9 +638,7 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
             
             generator->EmitBytecode(op_init_object);
             generator->EmitRegister(valueRegister.Ptr());
-            generator->EmitConstantInt(objectType->GetNextOffset());
-            std::string destructorName = std::string("$destroy_") + objectType->Name();
-            generator->EmitConstantString(destructorName);
+            generator->EmitConstantString(objectType->Name());
         }
     }
     
@@ -724,7 +706,7 @@ Register* ReturnStatement::EmitBytecode(BytecodeGenerator* generator, Register* 
         
         if (returnValueAccessor->GetType() != reg->GetType())
         {
-            generator->CoerceInPlace(reg.Ptr(), returnValueAccessor->GetType());
+            reg = generator->Coerce(reg.Ptr(), returnValueAccessor->GetType());
         }
         
         returnValueAccessor->EmitSave(generator, reg.Ptr(), 0);
@@ -857,14 +839,14 @@ std::string IfStatement::ToString() const
 
 Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
-    RefPtr<Register> expressionReg = dst ? dst : generator->NewTempRegister().Ptr();
+    RefPtr<Register> expressionReg = generator->NewTempRegister().Ptr();
     
     assert(m_expression.Ptr());
     expressionReg = m_expression->EmitBytecode(generator, expressionReg.Ptr());
     
     if (expressionReg->GetType() != generator->GetGlobalData()->GetIntType())
     {
-        generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
+        expressionReg = generator->Coerce(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
     }
     
     generator->CleanupRegisters();
@@ -944,7 +926,7 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
         
         if (expressionReg->GetType() != generator->GetGlobalData()->GetIntType())
         {
-            generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
+            expressionReg = generator->Coerce(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
         }
         
         generator->CleanupRegisters();
@@ -1033,7 +1015,7 @@ Register* ForStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         
         if (expressionReg->GetType() != generator->GetGlobalData()->GetIntType())
         {
-            generator->CoerceInPlace(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
+            expressionReg = generator->Coerce(expressionReg.Ptr(), generator->GetGlobalData()->GetIntType());
         }
         
         generator->CleanupRegisters();

@@ -48,10 +48,21 @@ struct type1
 
 type1 yyy;
 int i;
+string z1;
+string z2;
+string z3;
+string z4;
+string z5;
 
 for (i=0; i<10; i++)
 {
-	yyy.c = "new string";
+	yyy.c = "new string " + i;
+	z1 = "testing z1 " + i;
+	z2 = "testing z2 " + i;
+	z3 = "testing z3 " + i;
+	z4 = "testing z4 " + i;
+	z5 = "testing z5 " + i;
+	
 }
 
 debug "finished";
