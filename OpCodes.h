@@ -43,6 +43,7 @@
     MACRO(op_debug_int, "r", 1) \
     MACRO(op_debug_float, "r", 1) \
     MACRO(op_debug_string, "r", 1) \
+    MACRO(op_debug_object, "sr", 2) \
     MACRO(op_init_ref, "r", 1) \
     MACRO(op_jmp_if_true, "ri", 2) \
     MACRO(op_jmp_if_false, "ri", 2) \

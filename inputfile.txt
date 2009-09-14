@@ -1,68 +1,23 @@
 struct type1
 {
-	int a;
 	number b;
+	int a;
 	string c;
+	type1 t;
 }
-# 
-# type1 t1;
-# type1 t2;
-# t1.a = 100;
-# t2.a = 200;
-# 
-# 
-# debug t1.a;
-# debug t2.a;
-# 
-# debug t1.a + t2.a;
-# 
-# t1.b = 10.2;
-# t2.c = " lei";
-# 
-# debug t1.b + t2.c;
-# 
-# int tt;
-# for(tt=0; tt< 20; ++tt)
-# {
-# 	if (tt == 4)
-# 		continue;
-# 	debug tt;
-# 	if (tt > 6)
-# 		break;
-# }
-# 
-# debug "break";
-# 
-# tt = 0;
-# while (tt < 100)
-# {
-# 	tt ++;
-# 	if (tt < 10)
-# 		continue;
-# 	
-# 	if (tt > 20)
-# 		break;
-# 	
-# 	debug tt;
-# }
 
-type1 yyy;
-int i;
-string z1;
-string z2;
-string z3;
-string z4;
-string z5;
+type1 t1 = type1();
 
-for (i=0; i<10; i++)
-{
-	yyy.c = "new string " + i;
-	z1 = "testing z1 " + i;
-	z2 = "testing z2 " + i;
-	z3 = "testing z3 " + i;
-	z4 = "testing z4 " + i;
-	z5 = "testing z5 " + i;
-	
-}
+t1.b = 10;
+t1.c = "test";
+t1.t = type1();
+t1.t.c = "test2";
+
+
+debug t1.b;
+debug t1.c;
+debug t1;
+debug t1.t;
+debug t1.t.c;
 
 debug "finished";

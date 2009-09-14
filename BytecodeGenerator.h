@@ -66,7 +66,7 @@ public:
     }
     
     virtual bool IsBuiltin() const { return false; }
-    virtual bool IsRefCounted() const { return false; }
+    virtual bool IsCollectorRef() const { return false; }
     virtual bool IsObjectType() const { return false; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
@@ -151,7 +151,7 @@ public:
     {
     }
     
-    virtual bool IsRefCounted() const { return true; }
+    virtual bool IsCollectorRef() const { return true; }
     virtual int GetPriority() const { return 2; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
@@ -212,7 +212,7 @@ public:
     int GetNextOffset(int size);
     
     virtual bool IsObjectType() const { return true; }
-    virtual bool IsRefCounted() const { return true; }
+    virtual bool IsCollectorRef() const { return true; }
     
     void PutProperty(GlobalData* globalData, std::string& name, Type* type);
     bool HasProperty(std::string& name);
@@ -220,6 +220,8 @@ public:
     
     int ObjectSize();
     void MarkObject(RefObject* ref);
+    
+    void DebugObject(GlobalData* globalData, RefObject* ref);
 
 private:
     RefPtr<ObjectType> m_extendedType;

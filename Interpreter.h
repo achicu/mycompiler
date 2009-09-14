@@ -10,6 +10,7 @@
 #define INTERPRETER_H
 
 #include <vector>
+#include <string>
 #include "Collector.h"
 
 union Bytecode;
@@ -17,6 +18,17 @@ class GlobalData;
 
 class CollectorRef;
 class ObjectType;
+
+class RefString: public CollectorRef
+{
+public:
+    RefString(std::string value)
+        : Value (value)
+    {
+    }
+    
+    std::string Value;
+};
 
 class RefObject: public CollectorRef
 {

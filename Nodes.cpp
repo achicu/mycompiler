@@ -165,6 +165,29 @@ std::string CallNode::ToString() const
 
 Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
+    // if this is a name of a type, we have to initialize the object here
+    Type* type = generator->GetGlobalData()->GetDefinedType(m_name->Value());
+    if (type)
+    {
+        RefPtr<Register> reg (dst ? dst : generator->NewTempRegister());
+        
+        if (!type->IsObjectType())
+        {
+            printf("cannot initialize builtin types");
+            exit(1);
+        }
+        
+        ObjectType* objectType = static_cast<ObjectType*>(type);
+
+        generator->EmitBytecode(op_init_object);
+        generator->EmitRegister(reg.Ptr());
+        generator->EmitConstantString(objectType->Name());
+        
+        reg->SetType(type);
+        
+        return reg.Ptr();
+    }
+
     // this where the result will come (if we have one), otherwise it will be start of the next function frame
     RefPtr<Register> reg (generator->NewTempRegister());
 
@@ -390,6 +413,12 @@ Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     RefPtr<Accessor> accessor( m_node1->GetAccessor(generator) );
     assert(accessor.Ptr());
+    
+    if (!reg2->GetType())
+    {
+        printf("void type assignment\n");
+        exit(1);
+    }
     
     if (accessor->GetType() != reg2->GetType())
     {
@@ -618,6 +647,12 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         PassRef<Accessor> accessor = generator->GetProperty(m_nameIdentifier->Value());
         assert(accessor.Ptr());
         
+        if (!initializedValue->GetType())
+        {
+            printf("void type assignment\n");
+            exit(1);
+        }
+        
         if (accessor->GetType() != initializedValue->GetType())
         {
             initializedValue = generator->Coerce(initializedValue.Ptr(), accessor->GetType());
@@ -627,7 +662,8 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
     }
     else
     {
-        PassRef<Accessor> accessor = generator->GetProperty(m_nameIdentifier->Value());
+        // we used to auto initialize variables
+        /*PassRef<Accessor> accessor = generator->GetProperty(m_nameIdentifier->Value());
         assert(accessor.Ptr());
         
         if (accessor->GetType()->IsObjectType())
@@ -639,7 +675,7 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
             generator->EmitBytecode(op_init_object);
             generator->EmitRegister(valueRegister.Ptr());
             generator->EmitConstantString(objectType->Name());
-        }
+        }*/
     }
     
     return 0;
@@ -783,22 +819,34 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     
     dst = m_expression->EmitBytecode(generator, dst);
     
-    if (generator->GetGlobalData()->GetIntType() == dst->GetType())
+    Type* type = dst->GetType();
+    
+    if (!type)
+    {
+        printf("cannot debug type void\n");
+        exit(1);
+    }
+    else if (generator->GetGlobalData()->GetIntType() == type)
     {
         generator->EmitBytecode(op_debug_int);
     }
-    else if (generator->GetGlobalData()->GetFloatType() == dst->GetType())
+    else if (generator->GetGlobalData()->GetFloatType() == type)
     {
         generator->EmitBytecode(op_debug_float);
     }
-    else if (generator->GetGlobalData()->GetStringType() == dst->GetType())
+    else if (generator->GetGlobalData()->GetStringType() == type)
     {
         generator->EmitBytecode(op_debug_string);
     }
+    else if (type->IsObjectType())
+    {
+        generator->EmitBytecode(op_debug_object);
+        generator->EmitConstantString(type->Name());
+    }
     else
     {
-        assert(dst->GetType());
-        printf("debug failed for type %s\n", dst->GetType()->Name().c_str());
+        printf("debug failed for type \"%s\"\n", type->Name().c_str());
+        exit(1);
     }
     
     generator->EmitRegister(dst);

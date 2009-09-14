@@ -20,28 +20,6 @@ struct BytecodeMetaData
     int length;
 };
 
-class RefString: public CollectorRef
-{
-public:
-    RefString(std::string value)
-        : Value (value)
-    {
-        printf("created RefString %d \"%s\"\n", ++s_instances, value.c_str());
-    }
-    
-    ~RefString()
-    {
-        printf("destroyed RefString %d \"%s\"\n", --s_instances, Value.c_str());
-    }
-    
-    std::string Value;
-    
-private:
-    static int s_instances;
-};
-
-int RefString::s_instances = 0;
-
 RefObject::RefObject(ObjectType* type)
     : m_type(type)
 {
@@ -264,6 +242,12 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             printf("%s\n", static_cast<RefString*>(R(1).asReference)->Value.c_str());
         NEXT()
 
+        OPCODE(op_debug_object)
+            Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(1).ConstantStringIndex));
+            assert(type->IsObjectType());
+            static_cast<ObjectType*>(type)->DebugObject(globalData, static_cast<RefObject*>(R(2).asReference));
+        NEXT()
+
         OPCODE(op_init_ref)
             R(1).asReference = 0;
         NEXT()
@@ -313,30 +297,54 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         
         OPCODE(op_load_int_object_property)
-            assert (R(2).asReference);
+            if (!R(2).asReference)
+            {
+                printf("null reference\n");
+                exit(1);
+            }
             R(1).asInt = static_cast<RefObject*>(R(2).asReference)->ReadAtOffset<int>(V(3).ConstantInt);
         NEXT()
         OPCODE(op_save_int_object_property)
-            assert (R(2).asReference);
+            if (!R(1).asReference)
+            {
+                printf("null reference\n");
+                exit(1);
+            }
             static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<int>(V(3).ConstantInt, R(2).asInt);
         NEXT()
         
         OPCODE(op_load_float_object_property)
-            assert (R(2).asReference);
+            if (!R(2).asReference)
+            {
+                printf("null reference\n");
+                exit(1);
+            }
             R(1).asFloat = static_cast<RefObject*>(R(2).asReference)->ReadAtOffset<double>(V(3).ConstantInt);
         NEXT()
         OPCODE(op_save_float_object_property)
-            assert (R(2).asReference);
+            if (!R(1).asReference)
+            {
+                printf("null reference\n");
+                exit(1);
+            }
             static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<double>(V(3).ConstantInt, R(2).asFloat);
         NEXT()
         
         OPCODE(op_load_ref_object_property)
-            assert (R(2).asReference);
+            if (!R(2).asReference)
+            {
+                printf("null reference\n");
+                exit(1);
+            }
             R(1).asReference = static_cast<RefObject*>(R(2).asReference)->ReadAtOffset<CollectorRef*>(V(3).ConstantInt);
         NEXT()
         
         OPCODE(op_save_ref_object_property)
-            assert (R(2).asReference);
+            if (!R(1).asReference)
+            {
+                printf("null reference\n");
+                exit(1);
+            }
             static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<CollectorRef*>(V(3).ConstantInt, R(2).asReference);
         NEXT()
 

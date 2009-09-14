@@ -23,7 +23,9 @@ Heap* Heap::s_currentHeap = 0;
 
 void* Heap::Allocate(size_t size)
 {
-    Collect();
+
+//  To find collection errors just decomment the following line 
+//  Collect();
     
     assert(size < CELL_SIZE);
     for (int i=0; i<m_blocks.size(); ++i)

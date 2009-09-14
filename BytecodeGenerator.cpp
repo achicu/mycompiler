@@ -445,7 +445,7 @@ Register* ObjectPropertyAccessor::EmitLoad(BytecodeGenerator* generator, Registe
 {
     if (!dst) dst = generator->NewTempRegister().Ptr();
     
-    if (GetType()->IsRefCounted())
+    if (GetType()->IsCollectorRef())
         generator->EmitBytecode(op_load_ref_object_property);
     else if (GetType() == generator->GetGlobalData()->GetIntType())
         generator->EmitBytecode(op_load_int_object_property);
@@ -469,7 +469,7 @@ Register* ObjectPropertyAccessor::EmitSave(BytecodeGenerator* generator, Registe
         exit(1);
     }
     
-    if (GetType()->IsRefCounted())
+    if (GetType()->IsCollectorRef())
         generator->EmitBytecode(op_save_ref_object_property);
     else if (GetType() == generator->GetGlobalData()->GetIntType())
         generator->EmitBytecode(op_save_int_object_property);
@@ -488,6 +488,71 @@ int ObjectType::ObjectSize()
     return m_nextOffset; 
 }
 
+void ObjectType::DebugObject(GlobalData* globalData, RefObject* ref)
+{
+    std::ostringstream o;
+    if (!ref)
+    {
+        o << "null";
+    }
+    else
+    {
+        o << "[ " << (intptr_t) ref << "\n";
+        
+        ObjectType* type = this;
+        while (type)
+        {
+            o << type->Name() << ":\n";
+            
+            PropertyMap::iterator iter = m_properties.begin();
+            for(; iter != m_properties.end(); ++iter)
+            {
+                o << "\t";
+                ObjectProperty& objectProperty = (*iter).second;
+                Type* const propertyType = objectProperty.GetType();
+                if (propertyType->IsCollectorRef())
+                {
+                    CollectorRef* collectorRef = ref->ReadAtOffset<CollectorRef*>(objectProperty.GetOffset());
+                    o << '[' << propertyType->Name() << "] ";
+                    
+                    if (propertyType == globalData->GetStringType())
+                    {
+                        if (collectorRef)
+                        {
+                            RefString* refString = static_cast<RefString*>(collectorRef);
+                            o << refString->Value;
+                        }
+                    }
+                    else
+                    {
+                        o << (intptr_t)collectorRef;
+                    }
+                }
+                else if (propertyType == globalData->GetIntType())
+                {
+                    int value = ref->ReadAtOffset<int>(objectProperty.GetOffset());
+                    o << '[' << propertyType->Name() << "] " << value;
+                }
+                else if (propertyType == globalData->GetFloatType())
+                {
+                    double value = ref->ReadAtOffset<double>(objectProperty.GetOffset());
+                    o << '[' << propertyType->Name() << "] " << value;
+                }
+                else
+                {
+                    assert(false);
+                }
+                
+                o << "\n";
+            }
+            
+            type = type->m_extendedType.Ptr();
+        }
+    }
+    o << "]";
+    printf("%s\n", o.str().c_str());
+}
+
 void ObjectType::MarkObject(RefObject* ref)
 {
     ObjectType* type = this;
@@ -497,7 +562,7 @@ void ObjectType::MarkObject(RefObject* ref)
         for(; iter != m_properties.end(); ++iter)
         {
             ObjectProperty& objectProperty = (*iter).second;
-            if (objectProperty.GetType()->IsRefCounted())
+            if (objectProperty.GetType()->IsCollectorRef())
             {
                 CollectorRef* collectorRef = ref->ReadAtOffset<CollectorRef*>(objectProperty.GetOffset());
                 if (collectorRef && !Heap::IsCellMarked(collectorRef))
@@ -540,14 +605,14 @@ void ObjectType::PutProperty(GlobalData* globalData, std::string& name, Type* ty
     }
     
     int offset = 0;
-    if ( type->IsRefCounted() )
+    if ( type->IsCollectorRef() )
         offset = GetNextOffset(sizeof(CollectorCell*));
     else if (type == globalData->GetIntType())
         offset = GetNextOffset(sizeof(int));
     else if (type == globalData->GetFloatType())
         offset = GetNextOffset(sizeof(float));
-            
-    assert(offset != 0);
+    else
+        assert(false);
     
     ObjectProperty property( name, type, offset );
     m_properties.insert(make_pair(name, property));
@@ -580,7 +645,6 @@ GlobalData::GlobalData()
 
 GlobalData::~GlobalData()
 {
-    printf("~globalData\n");
 }
 
 Type* GlobalData::GetDefinedType(std::string completeName)
@@ -638,7 +702,8 @@ void GlobalData::DefineObjectType(StructNode* structNode)
     ObjectType* extendedObjectType = extendedType ? static_cast<ObjectType*>(extendedType) : 0;
     
     RefPtr<ObjectType> newType (AdoptRef(new ObjectType (completeName, extendedObjectType)));
-    
+    m_typeList[completeName] = newType.Ptr();
+        
     StatementList* statementsList = structNode->GetDeclarations();
     if (statementsList)
     {
@@ -655,8 +720,6 @@ void GlobalData::DefineObjectType(StructNode* structNode)
             }
         }
     }
-        
-    m_typeList[completeName] = newType.Ptr();
 }
 
 MethodEnv* GlobalData::GetMethod(std::string name, MethodNode* methodNode)
@@ -874,7 +937,7 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
     reg->SetType(type);
     property->SetRegister(reg.Ptr());
     
-    if (type->IsRefCounted())
+    if (type->IsCollectorRef())
     {
         EmitBytecode(op_init_ref);
         EmitRegister(reg.Ptr());
