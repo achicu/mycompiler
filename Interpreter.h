@@ -18,6 +18,7 @@ class GlobalData;
 
 class CollectorRef;
 class ObjectType;
+class VectorType;
 
 class RefString: public CollectorRef
 {
@@ -38,8 +39,6 @@ public:
     
     virtual void Mark();
     
-    char* Buffer() const { return m_buffer; }
-    
     template <typename T>
     T ReadAtOffset(int offset)
     {
@@ -55,6 +54,41 @@ public:
 private:
     ObjectType* m_type;
     char* m_buffer;
+};
+
+class RefVector: public CollectorRef
+{
+public:
+    RefVector(VectorType* type, int size);
+    virtual ~RefVector();
+    
+    virtual void Mark();
+    
+    template <typename T>
+    T ReadAtOffset(int offset)
+    {
+        CheckSpace(offset);
+        return *(reinterpret_cast<T*>(&m_buffer[offset]));
+    }
+    
+    template <typename T>
+    void WriteAtOffset(int offset, T value)
+    {
+        CheckSpace(offset);
+        *(reinterpret_cast<T*>(&m_buffer[offset])) = value;
+    }
+    
+    char* GetBuffer() const { return m_buffer; }
+    int GetSize() const { return m_size; }
+    
+private:
+
+    void CheckSpace(int offset);
+    
+    VectorType* m_type;
+    char* m_buffer;
+    int m_bufferSize;
+    int m_size;
 };
 
 union RegisterValue

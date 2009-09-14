@@ -165,33 +165,61 @@ std::string CallNode::ToString() const
 
 Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
+    std::string name = m_name->CompleteTypeName();
+    
     // if this is a name of a type, we have to initialize the object here
-    Type* type = generator->GetGlobalData()->GetDefinedType(m_name->Value());
+    Type* type = generator->GetGlobalData()->GetDefinedType(name);
     if (type)
     {
         RefPtr<Register> reg (dst ? dst : generator->NewTempRegister());
         
-        if (!type->IsObjectType())
+        if (type->IsObjectType())
+        {
+            generator->EmitBytecode(op_init_object);
+            generator->EmitRegister(reg.Ptr());
+            generator->EmitConstantString(type->Name());
+            
+            reg->SetType(type);
+            
+            return reg.Ptr();
+        }
+        else if (type->IsVectorRef())
+        {
+            if (!m_arguments.Ptr() || m_arguments->size() != 1)
+            {
+                printf("vector initialization needs 1 size argument\n");
+                exit(1);
+            }
+            
+            RefPtr<Register> sizeReg = generator->NewTempRegister();
+            
+            sizeReg = m_arguments->at(0)->EmitBytecode(generator, sizeReg.Ptr());
+            
+            if (sizeReg->GetType() != generator->GetGlobalData()->GetIntType())
+            {
+                sizeReg = generator->Coerce(sizeReg.Ptr(), generator->GetGlobalData()->GetIntType());
+            }
+            
+            generator->EmitBytecode(op_init_vector);
+            generator->EmitRegister(reg.Ptr());
+            generator->EmitRegister(sizeReg.Ptr());
+            generator->EmitConstantString(type->Name());
+            
+            reg->SetType(type);
+            
+            return reg.Ptr();
+        }
+        else
         {
             printf("cannot initialize builtin types");
             exit(1);
         }
-        
-        ObjectType* objectType = static_cast<ObjectType*>(type);
-
-        generator->EmitBytecode(op_init_object);
-        generator->EmitRegister(reg.Ptr());
-        generator->EmitConstantString(objectType->Name());
-        
-        reg->SetType(type);
-        
-        return reg.Ptr();
     }
 
     // this where the result will come (if we have one), otherwise it will be start of the next function frame
     RefPtr<Register> reg (generator->NewTempRegister());
 
-    MethodEnv* methodEnv = generator->GetGlobalData()->GetMethod(m_name->Value());
+    MethodEnv* methodEnv = generator->GetGlobalData()->GetMethod(name);
     
     if (methodEnv->GetReturnType())
     {
@@ -247,7 +275,7 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     generator->EmitBytecode(op_call_method);
     generator->EmitRegister(reg.Ptr());
-    generator->EmitConstantString(m_name->Value());
+    generator->EmitConstantString(name);
     
     return dst;
 }
@@ -438,11 +466,11 @@ std::string AccessorNode::ToString() const
     std::ostringstream o;
     o << "[AccessorNode ";
 
-    if (m_identifier.Ptr())
-        o << m_identifier->ToString() << " offset ";
+    if (m_node.Ptr())
+        o << m_node->ToString() << " offset ";
 
-    if (m_nodes.Ptr())
-        o << m_nodes->ToString();
+    if (m_offsetNode.Ptr())
+        o << m_offsetNode->ToString();
     
     o << " " << LocationToString();
     
@@ -450,6 +478,43 @@ std::string AccessorNode::ToString() const
     
     return o.str();
 }
+
+PassRef<Accessor> AccessorNode::GetAccessor(BytecodeGenerator* generator)
+{
+    RefPtr<Accessor> accessor = m_node->GetAccessor(generator);
+    if (!accessor.Ptr())
+    {
+        printf("invalid referenced object\n");
+        exit(1);
+    }
+    
+    RefPtr<Register> dst ( generator->NewTempRegister() );
+    dst = accessor->EmitLoad( generator, dst.Ptr() );
+    
+    assert(dst->GetType());
+    if (!dst->GetType()->IsVectorRef())
+    {
+        printf("invalid offset accessor getter on non vector type\n");
+        exit(1);
+    }
+    
+    RefPtr<Register> offsetRegister ( generator->NewTempRegister() );
+    offsetRegister = m_offsetNode->EmitBytecode(generator, offsetRegister.Ptr());
+    
+    VectorType* objectType = static_cast<VectorType*>(dst->GetType());
+    return objectType->GetRegisterAccessor(offsetRegister.Ptr(), dst.Ptr());
+}
+
+Register* AccessorNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(dst);
+    
+    PassRef<Accessor> accessor = GetAccessor(generator);
+    dst->SetIgnored();
+    
+    return accessor->EmitLoad(generator, dst);
+}
+
 
 // ============ DotNode ============
 
@@ -589,6 +654,12 @@ std::string TypeNode::ToString() const
     o << "]";
     
     return o.str();
+}
+
+std::string TypeNode::GetName() const
+{
+    assert(m_typeIdentifier.Ptr());
+    return m_typeIdentifier->Value();
 }
 
 std::string TypeNode::CompleteTypeName() const
@@ -841,6 +912,11 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     else if (type->IsObjectType())
     {
         generator->EmitBytecode(op_debug_object);
+        generator->EmitConstantString(type->Name());
+    }
+    else if (type->IsVectorRef())
+    {
+        generator->EmitBytecode(op_debug_vector);
         generator->EmitConstantString(type->Name());
     }
     else

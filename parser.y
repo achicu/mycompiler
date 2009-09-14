@@ -183,7 +183,7 @@ ExpressionList:
 
 LeftSide:
   Identifier { $$ = $1 }
-| LeftSide SQUARE_BRACKET_START ExpressionList SQUARE_BRACKET_END  { $$ = new AccessorNode($1, $3); DBG($$, @1, @4); }
+| LeftSide SQUARE_BRACKET_START Expression SQUARE_BRACKET_END  { $$ = new AccessorNode($1, $3); DBG($$, @1, @4); }
 | LeftSide DOT Identifier { $$ = new DotNode($1, $3); DBG($$, @1, @3); }
 ;
 
@@ -221,7 +221,6 @@ CompareExpression:
 | CompareExpression MORE_EQUALS PlusExpression     { $$ = new BinaryOpNode(binary_op_more_or_equal, $1, $3); DBG($$, @1, @3); }
 ;
 
-
 Identifier:
   IDENTIFIER        { $$ = new IdentifierNode(yytext); DBG($$, @1, @1); }
 ;
@@ -234,15 +233,15 @@ Literal:
 | PLUS INTEGER_NUMBER    { $$ = new IntegerValueNode(atoi(yytext)); DBG($$, @1, @1); }
 | PLUS FLOAT_NUMBER      { $$ = new FloatValueNode(atof(yytext)); DBG($$, @1, @1); }
 | STRING_TOKEN      { $$ = new StringValueNode(yytext); DBG($$, @1, @1); }
-| CallExpression    { $$ = $1; DBG($$, @1, @1); }
 | Identifier        { $$ = $1; DBG($$, @1, @1); }
 | PARAN_START Expression PARAN_END  { $$ = $2; DBG($$, @1, @3); }
 | LeftSide
+| CallExpression    { $$ = $1; DBG($$, @1, @1); }
 ;
 
 CallExpression:
-  Identifier PARAN_START PARAN_END                  { $$ = new CallNode($1, 0); DBG($$, @1, @3); }
-| Identifier PARAN_START ExpressionList PARAN_END   { $$ = new CallNode($1, $3); DBG($$, @1, @4); }
+  TypeDeclaration PARAN_START PARAN_END                  { $$ = new CallNode($1, 0); DBG($$, @1, @3); }
+| TypeDeclaration PARAN_START ExpressionList PARAN_END   { $$ = new CallNode($1, $3); DBG($$, @1, @4); }
 ;
 
 Expression:
@@ -282,7 +281,7 @@ TypeDeclarationList:
 
 TypeDeclaration:
   Identifier                            { $$ = new TypeNode($1, 0); DBG($$, @1, @1); }
-| Identifier LESS TypeDeclarationList MORE   { $$ = new TypeNode($1, $3); DBG($$, @1, @3); }
+| Identifier DOT LESS TypeDeclarationList MORE   { $$ = new TypeNode($1, $4); DBG($$, @1, @4); }
 ;
 
 VariableDeclarationStatement:

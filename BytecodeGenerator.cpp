@@ -604,15 +604,7 @@ void ObjectType::PutProperty(GlobalData* globalData, std::string& name, Type* ty
         exit(1);
     }
     
-    int offset = 0;
-    if ( type->IsCollectorRef() )
-        offset = GetNextOffset(sizeof(CollectorCell*));
-    else if (type == globalData->GetIntType())
-        offset = GetNextOffset(sizeof(int));
-    else if (type == globalData->GetFloatType())
-        offset = GetNextOffset(sizeof(float));
-    else
-        assert(false);
+    int offset = GetNextOffset(type->GetObjectSize());
     
     ObjectProperty property( name, type, offset );
     m_properties.insert(make_pair(name, property));
@@ -630,16 +622,188 @@ PassRef<Accessor> ObjectType::GetPropertyAccessor(std::string& name, Register* f
     return false;
 }
 
+Register* VectorAccessor::EmitLoad(BytecodeGenerator* generator, Register* dst)
+{
+    if (!dst) dst = generator->NewTempRegister().Ptr();
+    
+    if (GetType()->IsCollectorRef())
+        generator->EmitBytecode(op_load_ref_vector_property);
+    else if (GetType() == generator->GetGlobalData()->GetIntType())
+        generator->EmitBytecode(op_load_int_vector_property);
+    else if (GetType() == generator->GetGlobalData()->GetFloatType())
+        generator->EmitBytecode(op_load_float_vector_property);
+    
+    generator->EmitRegister(dst);
+    generator->EmitRegister(m_register.Ptr());
+    generator->EmitRegister(m_offsetRegister.Ptr());
+    
+    dst->SetType(GetType());
+    
+    return dst;
+}
+
+Register* VectorAccessor::EmitSave(BytecodeGenerator* generator, Register* src, Register* dst)
+{
+    if (src->GetType() != GetType())
+    {
+        printf("invalid type\n");
+        exit(1);
+    }
+    
+    if (GetType()->IsCollectorRef())
+        generator->EmitBytecode(op_save_ref_vector_property);
+    else if (GetType() == generator->GetGlobalData()->GetIntType())
+        generator->EmitBytecode(op_save_int_vector_property);
+    else if (GetType() == generator->GetGlobalData()->GetFloatType())
+        generator->EmitBytecode(op_save_float_vector_property);
+        
+    generator->EmitRegister(m_register.Ptr());
+    generator->EmitRegister(src);
+    generator->EmitRegister(m_offsetRegister.Ptr());
+    
+    return src;
+}
+
+PassRef<Accessor> VectorType::GetRegisterAccessor(Register* offsetRegister, Register* forReg)
+{
+    return AdoptRef<Accessor>(new VectorAccessor(GetElementType(), offsetRegister, forReg));
+}
+
+void VectorType::MarkObject(RefVector* ref)
+{
+    assert(ref);
+    
+    if (GetElementType()->IsCollectorRef())
+    {
+        CollectorRef** iter = reinterpret_cast<CollectorRef**>(ref->GetBuffer());
+        CollectorRef** last = iter + ref->GetSize();
+        while (iter < last)
+        {
+            CollectorRef* const collectorRef = *iter;
+            if (collectorRef && !Heap::IsCellMarked(collectorRef))
+            {
+                collectorRef->Mark();
+            }
+            ++ iter;
+        }
+    }
+}
+
+void VectorType::DebugObject(GlobalData* globalData, RefVector* ref)
+{
+    std::ostringstream o;
+    if (!ref)
+    {
+        o << "null";
+    }
+    else
+    {
+        o << "[ " << (intptr_t) ref << "\n" << Name() << ":\n";
+    
+        Type* elementType = GetElementType();
+        if (elementType->IsCollectorRef())
+        {
+            CollectorRef** iter = reinterpret_cast<CollectorRef**>(ref->GetBuffer());
+            CollectorRef** last = iter + ref->GetSize();
+            int index = 0;
+            while (iter < last)
+            {
+                CollectorRef* const collectorRef = *iter;
+                o << "\t[" << index++ << "] ";
+
+                if (elementType == globalData->GetStringType())
+                {
+                    if (collectorRef)
+                    {
+                        RefString* refString = static_cast<RefString*>(collectorRef);
+                        o << refString->Value;
+                    }
+                }
+                else
+                {
+                    o << (intptr_t) collectorRef;
+                }
+                
+                o << "\n";
+                ++ iter;
+            }
+        }
+        else if (elementType == globalData->GetIntType())
+        {
+            int* iter = reinterpret_cast<int*>(ref->GetBuffer());
+            int* last = iter + ref->GetSize();
+            int index = 0;
+            while (iter < last)
+            {
+                o << "\t[" << index++ << "] " << *iter << "\n";
+                ++ iter;
+            }
+        }
+        else if (elementType == globalData->GetFloatType())
+        {
+            double* iter = reinterpret_cast<double*>(ref->GetBuffer());
+            double* last = iter + ref->GetSize();
+            int index = 0;
+            while (iter < last)
+            {
+                o << "\t[" << index++ << "] " << *iter << "\n";
+                ++ iter;
+            }
+        }
+        else
+        {
+            assert(false);
+        }
+        
+        o << "]";
+        printf("%s\n", o.str().c_str());
+    }
+}
+
+Type* VectorType::GetElementType()
+{
+    if (m_elementType.Ptr())
+        return m_elementType.Ptr();
+    
+    TypeList* templateTypes = GetTemplateTypes();
+    
+    if (templateTypes->size() != 1)
+    {
+        printf("only 1 template argument is accepted by vector type\n");
+        exit(1);
+    }
+    
+    Type* objectType = templateTypes->at(0).Ptr();
+    
+    if (!objectType)
+    {
+        printf("invalid vector template type\n");
+        exit(1);
+    }
+    
+    m_elementType = objectType;
+    
+    return objectType;
+}
+
+int VectorType::GetElementSize()
+{
+    if (m_elementSize != 0)
+        return m_elementSize;
+    
+    m_elementSize = GetElementType()->GetObjectSize();
+    
+    return m_elementSize;
+}
+
 GlobalData::GlobalData()
     : m_intType(AdoptRef(new IntType()))
     , m_floatType(AdoptRef(new FloatType()))
     , m_stringType(AdoptRef(new StringType()))
-//    , m_vectorType(AdoptRef(new VectorType()))
 {
     m_typeList[m_intType->Name()] = m_intType.Ptr();
     m_typeList[m_floatType->Name()] = m_floatType.Ptr();
     m_typeList[m_stringType->Name()] = m_stringType.Ptr();
-//    m_typeList["vector"] = m_vectorType;
     m_heap.AdoptRef(new Heap(GetRegisterFile()));
 }
 
@@ -667,7 +831,13 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
         return (*iter).second.Ptr();
     }
     
-    RefPtr<Type> type (AdoptRef( new Type(completeName) ));
+    if (typeNode->GetName() != "vector")
+    {
+        printf("invalid typename \"%s\"\n", typeNode->GetName().c_str());
+        exit(1);
+    }
+    
+    RefPtr<Type> type (AdoptRef<Type>( new VectorType(completeName) ));
     
     TypeNodeList* typeNodeList = typeNode->GetTypeNodeList();
     if (typeNodeList)

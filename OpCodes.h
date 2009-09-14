@@ -44,6 +44,7 @@
     MACRO(op_debug_float, "r", 1) \
     MACRO(op_debug_string, "r", 1) \
     MACRO(op_debug_object, "sr", 2) \
+    MACRO(op_debug_vector, "sr", 2) \
     MACRO(op_init_ref, "r", 1) \
     MACRO(op_jmp_if_true, "ri", 2) \
     MACRO(op_jmp_if_false, "ri", 2) \
@@ -59,7 +60,14 @@
     MACRO(op_load_float_object_property, "rri", 3) \
     MACRO(op_save_float_object_property, "rri", 3) \
     MACRO(op_load_ref_object_property, "rri", 3) \
-    MACRO(op_save_ref_object_property, "rri", 3)
+    MACRO(op_save_ref_object_property, "rri", 3) \
+    MACRO(op_init_vector, "rrs", 3) \
+    MACRO(op_load_int_vector_property, "rrr", 3) \
+    MACRO(op_save_int_vector_property, "rrr", 3) \
+    MACRO(op_load_float_vector_property, "rrr", 3) \
+    MACRO(op_save_float_vector_property, "rrr", 3) \
+    MACRO(op_load_ref_vector_property, "rrr", 3) \
+    MACRO(op_save_ref_vector_property, "rrr", 3)
     
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,

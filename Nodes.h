@@ -152,7 +152,7 @@ private:
 class CallNode: public ArenaNode
 {
 public:
-    CallNode(IdentifierNode* name, NodeList* arguments)
+    CallNode(TypeNode* name, NodeList* arguments)
         : m_name(name)
         , m_arguments(arguments)
     {
@@ -162,7 +162,7 @@ public:
     virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
 
 private:
-    RefPtr<IdentifierNode> m_name;
+    RefPtr<TypeNode> m_name;
     RefPtr<NodeList> m_arguments;
 };
 
@@ -253,17 +253,20 @@ private:
 class AccessorNode: public ArenaNode
 {
 public:
-    AccessorNode(ArenaNode* identifier, NodeList* nodes)
-        : m_identifier(identifier)
-        , m_nodes(nodes)
+    AccessorNode(ArenaNode* node, ArenaNode* offsetNode)
+        : m_node(node)
+        , m_offsetNode(offsetNode)
     {
     }
     
     virtual std::string ToString() const;
     
+    virtual PassRef<Accessor> GetAccessor(BytecodeGenerator* generator);
+    virtual Register* EmitBytecode(BytecodeGenerator* generator, Register* dst);
+    
 private:
-    RefPtr<ArenaNode> m_identifier;
-    RefPtr<NodeList> m_nodes;
+    RefPtr<ArenaNode> m_node;
+    RefPtr<ArenaNode> m_offsetNode;
 };
 
 class DotNode: public ArenaNode
@@ -297,6 +300,7 @@ public:
      virtual std::string ToString() const;
      
      std::string CompleteTypeName() const;
+     std::string GetName() const;
      
      TypeNodeList* GetTypeNodeList() const { return m_typeNodeList.Ptr(); }
      

@@ -39,6 +39,35 @@ void RefObject::Mark()
     CollectorRef::Mark();
 }
 
+RefVector::RefVector(VectorType* type, int size)
+    : m_type(type)
+    , m_size(size)
+{
+    m_bufferSize = type->GetElementSize() * size;
+    m_buffer = new char[m_bufferSize];
+    memset(m_buffer, 0, m_bufferSize);
+}
+
+RefVector::~RefVector()
+{
+    delete [] m_buffer;
+}
+    
+void RefVector::Mark()
+{
+    m_type->MarkObject(this);
+    CollectorRef::Mark();
+}
+
+void RefVector::CheckSpace(int offset)
+{
+    if (offset < 0 || m_bufferSize <= offset)
+    {
+        printf("index out of bounds %d - %d\n", offset, m_bufferSize);
+        exit(1);
+    } 
+}
+
 static const int maximumReentrancy = 10000;
 
 class ReentrancyCheck
@@ -247,10 +276,17 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             assert(type->IsObjectType());
             static_cast<ObjectType*>(type)->DebugObject(globalData, static_cast<RefObject*>(R(2).asReference));
         NEXT()
-
+        
+        OPCODE(op_debug_vector)
+            Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(1).ConstantStringIndex));
+            assert(type->IsVectorRef());
+            static_cast<VectorType*>(type)->DebugObject(globalData, static_cast<RefVector*>(R(2).asReference));
+        NEXT()
+        
         OPCODE(op_init_ref)
             R(1).asReference = 0;
         NEXT()
+        
         OPCODE(op_jmp_if_true)
             if (R(1).asInt)
             {
@@ -292,8 +328,7 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         OPCODE(op_init_object)
             Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(2).ConstantStringIndex));
             assert(type->IsObjectType());
-            RefObject* refObject = new RefObject(static_cast<ObjectType*>(type));
-            R(1).asReference = refObject;
+            R(1).asReference = new RefObject(static_cast<ObjectType*>(type));
         NEXT()
         
         OPCODE(op_load_int_object_property)
@@ -348,6 +383,63 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             static_cast<RefObject*>(R(1).asReference)->WriteAtOffset<CollectorRef*>(V(3).ConstantInt, R(2).asReference);
         NEXT()
 
+        OPCODE(op_init_vector)
+            Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(3).ConstantStringIndex));
+            assert(type->IsVectorRef());
+            R(1).asReference = new RefVector(static_cast<VectorType*>(type), R(2).asInt);
+        NEXT()
+        
+        OPCODE(op_load_int_vector_property)
+            if (!R(2).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            R(1).asInt = static_cast<RefVector*>(R(2).asReference)->ReadAtOffset<int>(R(3).asInt * sizeof(int));
+        NEXT()
+        OPCODE(op_save_int_vector_property)
+            if (!R(1).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            static_cast<RefVector*>(R(1).asReference)->WriteAtOffset<int>(R(3).asInt * sizeof(int), R(2).asInt);
+        NEXT()
+        
+        OPCODE(op_load_float_vector_property)
+            if (!R(2).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            R(1).asFloat = static_cast<RefVector*>(R(2).asReference)->ReadAtOffset<double>(R(3).asInt * sizeof(double));
+        NEXT()
+        OPCODE(op_save_float_vector_property)
+            if (!R(1).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            static_cast<RefVector*>(R(1).asReference)->WriteAtOffset<double>(R(3).asInt * sizeof(double), R(2).asFloat);
+        NEXT()
+        
+        OPCODE(op_load_ref_vector_property)
+            if (!R(2).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            R(1).asReference = static_cast<RefVector*>(R(2).asReference)->ReadAtOffset<CollectorRef*>(R(3).asInt * sizeof(CollectorRef*));
+        NEXT()
+        
+        OPCODE(op_save_ref_vector_property)
+            if (!R(1).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            static_cast<RefVector*>(R(1).asReference)->WriteAtOffset<CollectorRef*>(R(3).asInt * sizeof(CollectorRef*), R(2).asReference);
+        NEXT()
         
 finished:
         return;

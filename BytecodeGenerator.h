@@ -68,10 +68,15 @@ public:
     virtual bool IsBuiltin() const { return false; }
     virtual bool IsCollectorRef() const { return false; }
     virtual bool IsObjectType() const { return false; }
+    virtual bool IsVectorRef() const { return false; }
+    
+    virtual int GetObjectSize() const { return 0; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst);
     virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
+    
+    TypeList* GetTemplateTypes() { return &m_templateTypes;}
 
 private:
     std::string m_name;
@@ -120,6 +125,8 @@ public:
     }
     
     virtual int GetPriority() const { return 0; }
+    
+    virtual int GetObjectSize() const { return sizeof(int); }
         
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
@@ -137,6 +144,8 @@ public:
     
     virtual int GetPriority() const { return 1; }
     
+    virtual int GetObjectSize() const { return sizeof(double); }
+    
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
     virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
@@ -153,6 +162,7 @@ public:
     
     virtual bool IsCollectorRef() const { return true; }
     virtual int GetPriority() const { return 2; }
+    virtual int GetObjectSize() const { return sizeof(RefString*); }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
 
@@ -202,8 +212,8 @@ class ObjectType: public BuiltinType
     typedef std::map<std::string, ObjectProperty> PropertyMap;
 public:
     
-    ObjectType(std::string type, ObjectType* extendedType)
-        : BuiltinType(type)
+    ObjectType(std::string name, ObjectType* extendedType)
+        : BuiltinType(name)
         , m_extendedType(extendedType)
         , m_nextOffset(extendedType ? extendedType->m_nextOffset : 0)
     {
@@ -213,6 +223,7 @@ public:
     
     virtual bool IsObjectType() const { return true; }
     virtual bool IsCollectorRef() const { return true; }
+    virtual int GetObjectSize() const { return sizeof(RefObject*); }
     
     void PutProperty(GlobalData* globalData, std::string& name, Type* type);
     bool HasProperty(std::string& name);
@@ -227,6 +238,51 @@ private:
     RefPtr<ObjectType> m_extendedType;
     PropertyMap m_properties;
     int m_nextOffset;
+};
+
+class VectorAccessor: public Accessor
+{
+public:
+    VectorAccessor(Type* type, Register* offsetRegister, Register* forReg)
+        : Accessor(type)
+        , m_register(forReg)
+        , m_offsetRegister(offsetRegister)
+    {
+    }
+    
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst);
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst);
+
+private:
+    RefPtr<Register> m_register;
+    RefPtr<Register> m_offsetRegister;
+};
+
+class VectorType: public BuiltinType
+{
+public:
+    VectorType(std::string name)
+        : BuiltinType(name)
+        , m_elementSize(0)
+    {
+    }
+    
+    virtual bool IsCollectorRef() const { return true; }
+    virtual bool IsVectorRef() const { return true; }
+    
+    PassRef<Accessor> GetRegisterAccessor(Register* offsetRegister, Register* forReg);
+    
+    void MarkObject(RefVector* ref);
+    
+    void DebugObject(GlobalData* globalData, RefVector* ref);
+    
+    virtual int GetObjectSize() const { return sizeof(RefVector*); }
+    int GetElementSize();
+    Type* GetElementType();
+
+private:
+    RefPtr<Type> m_elementType;
+    int m_elementSize;
 };
 
 class Property: public RefCounted

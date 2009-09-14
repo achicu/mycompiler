@@ -1,23 +1,20 @@
-struct type1
+vector.<int> vint = vector.<int>(20);
+
+vint[0] = 1;
+
+debug vint;
+
+vector.<string> vstring = vector.<string>(10);
+
+int i;
+int j = 10;
+
+for(i=0; i < j ; i++)
 {
-	number b;
-	int a;
-	string c;
-	type1 t;
+	vstring[i] = "test ";
 }
 
-type1 t1 = type1();
 
-t1.b = 10;
-t1.c = "test";
-t1.t = type1();
-t1.t.c = "test2";
-
-
-debug t1.b;
-debug t1.c;
-debug t1;
-debug t1.t;
-debug t1.t.c;
+debug vstring;
 
 debug "finished";
