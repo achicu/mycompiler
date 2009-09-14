@@ -62,6 +62,7 @@
     MACRO(op_load_ref_object_property, "rri", 3) \
     MACRO(op_save_ref_object_property, "rri", 3) \
     MACRO(op_init_vector, "rrs", 3) \
+    MACRO(op_vector_size, "rr", 2) \
     MACRO(op_load_int_vector_property, "rrr", 3) \
     MACRO(op_save_int_vector_property, "rrr", 3) \
     MACRO(op_load_float_vector_property, "rrr", 3) \

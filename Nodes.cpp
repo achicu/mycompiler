@@ -563,8 +563,41 @@ Register* DotNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
     assert(dst);
     
-    PassRef<Accessor> accessor = GetAccessor(generator);
-    dst->SetIgnored();
+    RefPtr<Accessor> leftAccessor = m_node->GetAccessor(generator);
+    if (!leftAccessor.Ptr())
+    {
+        printf("invalid referenced object\n");
+        exit(1);
+    }
+    
+    RefPtr<Register> leftDst ( generator->NewTempRegister() );
+    leftDst = leftAccessor->EmitLoad( generator, leftDst.Ptr() );
+    
+    assert(leftDst->GetType());
+    if (leftDst->GetType()->IsVectorRef())
+    {
+        if (m_identifier->Value() == "size")
+        {
+            // get the size of the vector
+            generator->EmitBytecode(op_vector_size);
+            generator->EmitRegister(dst);
+            generator->EmitRegister(leftDst.Ptr());
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+            return dst;
+        }
+        
+        printf("invalid property getter on vector object\n");
+        exit(1);
+    }
+    
+    if (!leftDst->GetType()->IsObjectType())
+    {
+        printf("invalid property getter on non object type\n");
+        exit(1);
+    }
+    
+    ObjectType* objectType = static_cast<ObjectType*>(leftDst->GetType());
+    PassRef<Accessor> accessor = objectType->GetPropertyAccessor(m_identifier->Value(), leftDst.Ptr());
     
     return accessor->EmitLoad(generator, dst);
 }

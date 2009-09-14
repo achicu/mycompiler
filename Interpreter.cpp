@@ -389,6 +389,16 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             R(1).asReference = new RefVector(static_cast<VectorType*>(type), R(2).asInt);
         NEXT()
         
+        OPCODE(op_vector_size)
+            if (!R(2).asReference)
+            {
+                printf("null vector reference\n");
+                exit(1);
+            }
+            
+            R(1).asInt = static_cast<RefVector*>(R(2).asReference)->GetSize();
+        NEXT()
+        
         OPCODE(op_load_int_vector_property)
             if (!R(2).asReference)
             {

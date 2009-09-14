@@ -27,13 +27,13 @@ extern char *yytext;
 
 %}
 
-%token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON DOT
+%token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN MORE_EQUALS
 %token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN D_EQUALS LESS_EQUALS BIT_AND_TOKEN AND_TOKEN BIT_OR_TOKEN OR_TOKEN
-%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN CONTINUE_TOKEN BREAK_TOKEN FOR_TOKEN
+%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN CONTINUE_TOKEN BREAK_TOKEN FOR_TOKEN DOT DOT_LESS
 
-%left MINUS PLUS
-%left MULTIPLY DIVIDE
+%nonassoc IF_WITHOUT_ELSE
+%nonassoc ELSE_TOKEN
 
 %union {
     ArenaNode* arenaNode;
@@ -41,7 +41,6 @@ extern char *yytext;
     IdentifierNode* identifierNode;
     NodeList* nodeList;
     StatementList* statementList;
-    IdentifierList* identifierList;
     TypeNodeList* typeNodeList;
     StatementNode* statementNode;
     TypeNode* typeNode;
@@ -58,7 +57,6 @@ extern char *yytext;
 %type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement IfStatement
 %type <statementNode> WhileStatement ForStatement ContinueStatement BreakStatement
 %type <statementList> GlobalStatementList InMethodStatementList InStructStatementList InBlockStatementList BlockOrStatement
-%type <identifierList> IdentifierList
 %type <typeNodeList> TypeDeclarationList
 %type <typeNode> TypeDeclaration
 %type <argumentNodeList> ArgumentDeclarationList
@@ -86,11 +84,6 @@ InMethodStatementList:
 InStructStatementList:
   InStructStatement     { $$ = new StatementList(); $$->push_back($1); DBG($$, @1, @1); }
 | InStructStatementList InStructStatement   { $$ = $1; $$->push_back($2); DBG($$, @1, @2); }
-;
-
-GlobalStatementList:
-  GlobalStatement     { $$ = new StatementList(); $$->push_back($1); DBG($$, @1, @1); }
-| GlobalStatementList GlobalStatement   { $$ = $1; $$->push_back($2); DBG($$, @1, @2); }
 ;
 
 InBlockStatementList:
@@ -142,7 +135,7 @@ BreakStatement:
 
 IfStatement:
   IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement ELSE_TOKEN BlockOrStatement { $$ = new IfStatement($3, $5, $7); DBG($$, @1, @7); }
-| IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement { $$ = new IfStatement($3, $5, 0); DBG($$, @1, @5); }
+| IF_TOKEN PARAN_START Expression PARAN_END BlockOrStatement %prec IF_WITHOUT_ELSE { $$ = new IfStatement($3, $5, 0); DBG($$, @1, @5); }
 ;
 
 ExprOp:
@@ -233,7 +226,6 @@ Literal:
 | PLUS INTEGER_NUMBER    { $$ = new IntegerValueNode(atoi(yytext)); DBG($$, @1, @1); }
 | PLUS FLOAT_NUMBER      { $$ = new FloatValueNode(atof(yytext)); DBG($$, @1, @1); }
 | STRING_TOKEN      { $$ = new StringValueNode(yytext); DBG($$, @1, @1); }
-| Identifier        { $$ = $1; DBG($$, @1, @1); }
 | PARAN_START Expression PARAN_END  { $$ = $2; DBG($$, @1, @3); }
 | LeftSide
 | CallExpression    { $$ = $1; DBG($$, @1, @1); }
@@ -258,11 +250,6 @@ MethodNode:
 | METHOD Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = new MethodNode(0, $2, $4, $7 ); DBG($$, @1, @8); }
 ;
 
-IdentifierList:
-  Identifier    { $$ = new IdentifierList(); $$->push_back($1); DBG($$, @1, @1); }
-| IdentifierList COMMA Identifier   { $$ = $1; $$->push_back($3); DBG($$, @1, @3); }
-;
-
 ArgumentDeclaration:
   TypeDeclaration Identifier    { $$ = new ArgumentNode($1, $2); DBG($$, @1, @2); }
 ;
@@ -281,7 +268,7 @@ TypeDeclarationList:
 
 TypeDeclaration:
   Identifier                            { $$ = new TypeNode($1, 0); DBG($$, @1, @1); }
-| Identifier DOT LESS TypeDeclarationList MORE   { $$ = new TypeNode($1, $4); DBG($$, @1, @4); }
+| Identifier DOT_LESS TypeDeclarationList MORE   { $$ = new TypeNode($1, $3); DBG($$, @1, @4); }
 ;
 
 VariableDeclarationStatement:

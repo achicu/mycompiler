@@ -40,7 +40,7 @@
 				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc",
 				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.hh",
 			);
-			script = "bison -t -d -o${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc ${INPUT_FILE_NAME}";
+			script = "bison -t -d -v -o${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc ${INPUT_FILE_NAME}";
 		};
 /* End PBXBuildRule section */
 
