@@ -84,10 +84,15 @@ int main (int argc, char * const argv[]) {
             printf("%s\n", result->ToString().c_str());
             
             RefPtr<GlobalData> globalData(AdoptRef(new GlobalData()));
+            assert(globalData->HasOneRef());
+            
             BytecodeGenerator generator(globalData.Ptr(), static_cast<StatementList*> (result.Ptr()));
             generator.Generate();
+            
             RefPtr<MethodEnv> methodEnv = generator.GetMethodEnv();
             methodEnv->Run(globalData->GetRegisterFile()->GetBlock());
+            
+            globalData = 0;
         }
         fclose(inputFile);
     }

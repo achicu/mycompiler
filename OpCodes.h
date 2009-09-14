@@ -54,7 +54,7 @@
     MACRO(op_load_scope, "rii", 3) \
     MACRO(op_save_scope, "rii", 3) \
     MACRO(op_call_method, "rs", 2) \
-    MACRO(op_init_object, "ri", 2) \
+    MACRO(op_init_object, "ris", 3) \
     MACRO(op_load_object_property, "rri", 3) \
     MACRO(op_save_object_property, "rri", 3) \
     MACRO(op_load_object_property_reference, "rri", 3) \

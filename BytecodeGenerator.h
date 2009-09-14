@@ -16,6 +16,7 @@
 #include "RefPtr.h"
 #include "Nodes.h"
 #include "RegisterFile.h"
+#include "Collector.h"
 
 class BytecodeGenerator;
 class Type;
@@ -220,6 +221,8 @@ public:
     void PutProperty(std::string& name, Type* type);
     bool HasProperty(std::string& name);
     PassRef<Accessor> GetPropertyAccessor(std::string& name, Register* forReg);
+    
+    void CreateDestructor(MethodEnv* methodEnv);
 
 private:
     RefPtr<ObjectType> m_extendedType;
@@ -323,6 +326,7 @@ class GlobalData: public RefCounted
     typedef std::map<std::string, RefPtr<MethodEnv> > MethodList;
 public:
     GlobalData();
+    virtual ~GlobalData();
     
     Type* GetTypeOf(TypeNode* typeNode);
     MethodEnv* GetMethod(std::string name, MethodNode* methodNode = 0);
@@ -355,6 +359,7 @@ private:
 //    RefPtr<VectorType> m_vectorType;
 
     RegisterFile m_registerFile;
+    RefPtr<Heap> m_heap;
     
 };
 
@@ -381,10 +386,12 @@ public:
     const TypeList* GetArgumentsType() const { return &m_argumentsType; }
     
     void PrependArgumentsFromMethodNode(MethodNode* method);
+    
+    GlobalData* GetGlobalData() const { return m_globalData; }
 
 private:
     std::vector<Bytecode> m_bytes;
-    RefPtr<GlobalData> m_globalData;
+    GlobalData* m_globalData; // globaldata keeps a reference to this object (circular references)
     RefPtr<Type> m_returnType;
     TypeList m_argumentsType;
     int m_registerCount;
@@ -400,6 +407,7 @@ public:
 
     BytecodeGenerator(GlobalData* globalData, Scope* parentScope, MethodNode* method);
     BytecodeGenerator(GlobalData* globalData, StatementList* statements);
+    BytecodeGenerator(MethodEnv* methodEnv);
 
     void CleanupRegisters();
 
@@ -411,6 +419,7 @@ public:
     Register* EmitNode(ArenaNode* node);
     
     void Generate();
+    void FinishMethod();
 
     GlobalData* GetGlobalData() const { return m_globalData.Ptr(); }
 
@@ -436,6 +445,7 @@ public:
     void EmitContinue();
     
     PassRef<MethodEnv> GetMethodEnv();
+    
 
 private:  
     void DeclareArguments(MethodNode* method);

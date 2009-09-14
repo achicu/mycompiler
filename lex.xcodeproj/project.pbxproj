@@ -15,6 +15,7 @@
 		504FC4BA105B9C510069DD2C /* Disassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FC4B9105B9C510069DD2C /* Disassembler.cpp */; };
 		504FC73E105BD1B70069DD2C /* Interpreter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FC73D105BD1B70069DD2C /* Interpreter.cpp */; };
 		504FCCE0105CC1B20069DD2C /* RegisterFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FCCDF105CC1B20069DD2C /* RegisterFile.cpp */; };
+		504FD02C105E13090069DD2C /* Collector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 504FD02B105E13090069DD2C /* Collector.cpp */; };
 		8DD76F650486A84900D96B5E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* main.cpp */; settings = {ATTRIBUTES = (); }; };
 		8DD76F6A0486A84900D96B5E /* lex.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = C6859E8B029090EE04C91782 /* lex.1 */; };
 /* End PBXBuildFile section */
@@ -76,6 +77,8 @@
 		504FC73D105BD1B70069DD2C /* Interpreter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Interpreter.cpp; sourceTree = "<group>"; };
 		504FCCDE105CC1B20069DD2C /* RegisterFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterFile.h; sourceTree = "<group>"; };
 		504FCCDF105CC1B20069DD2C /* RegisterFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterFile.cpp; sourceTree = "<group>"; };
+		504FD02A105E13090069DD2C /* Collector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Collector.h; sourceTree = "<group>"; };
+		504FD02B105E13090069DD2C /* Collector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Collector.cpp; sourceTree = "<group>"; };
 		8DD76F6C0486A84900D96B5E /* lex */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = lex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6859E8B029090EE04C91782 /* lex.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = lex.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -123,6 +126,8 @@
 				504FC73D105BD1B70069DD2C /* Interpreter.cpp */,
 				504FCCDE105CC1B20069DD2C /* RegisterFile.h */,
 				504FCCDF105CC1B20069DD2C /* RegisterFile.cpp */,
+				504FD02A105E13090069DD2C /* Collector.h */,
+				504FD02B105E13090069DD2C /* Collector.cpp */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -197,6 +202,7 @@
 				504FC4BA105B9C510069DD2C /* Disassembler.cpp in Sources */,
 				504FC73E105BD1B70069DD2C /* Interpreter.cpp in Sources */,
 				504FCCE0105CC1B20069DD2C /* RegisterFile.cpp in Sources */,
+				504FD02C105E13090069DD2C /* Collector.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -515,6 +515,35 @@ PassRef<Accessor> ObjectType::GetPropertyAccessor(std::string& name, Register* f
     return false;
 }
 
+void ObjectType::CreateDestructor(MethodEnv* methodEnv)
+{
+    BytecodeGenerator generator(methodEnv);
+    RefPtr<Register> objectRegister (generator.NewRegister());
+    objectRegister->SetType(this);
+    
+    RefPtr<Register> iteratorRegister ( generator.NewTempRegister() );
+
+    PropertyMap::iterator iter = m_properties.begin();
+    for(; iter != m_properties.end(); ++iter)
+    {
+        if ((*iter).second.GetType()->IsRefCounted())
+        {
+            generator.EmitBytecode(op_load_object_property);
+            generator.EmitRegister(iteratorRegister.Ptr());
+            generator.EmitRegister(objectRegister.Ptr());
+            generator.EmitConstantInt((*iter).second.GetOffset());
+            
+            generator.EmitBytecode(op_dec_ref);
+            generator.EmitRegister(iteratorRegister.Ptr());
+        }
+    }
+    
+    // the object is already at ref 0, no need to release it
+    objectRegister->SetType(0);
+    
+    generator.FinishMethod();
+}
+
 GlobalData::GlobalData()
     : m_intType(AdoptRef(new IntType()))
     , m_floatType(AdoptRef(new FloatType()))
@@ -525,6 +554,12 @@ GlobalData::GlobalData()
     m_typeList[m_floatType->Name()] = m_floatType.Ptr();
     m_typeList[m_stringType->Name()] = m_stringType.Ptr();
 //    m_typeList["vector"] = m_vectorType;
+    m_heap.AdoptRef(new Heap(GetRegisterFile()));
+}
+
+GlobalData::~GlobalData()
+{
+    printf("~globalData\n");
 }
 
 Type* GlobalData::GetTypeOf(TypeNode* typeNode)
@@ -588,6 +623,9 @@ void GlobalData::DefineObjectType(StructNode* structNode)
             }
         }
     }
+    
+    std::string destructorName = std::string("$destroy_") + completeName;
+    newType->CreateDestructor(GetMethod(destructorName));
     
     m_typeList[completeName] = newType.Ptr();
 }
@@ -679,6 +717,17 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
     }
 }
 
+// used to generate the destructors
+BytecodeGenerator::BytecodeGenerator(MethodEnv* methodEnv)
+    : m_globalData(methodEnv->GetGlobalData())
+    , m_maxRegisterCount(0)
+    , m_breakOrContinueHelper(0)
+{
+    m_methodEnv = methodEnv;
+    m_localScope.AdoptRef(new Scope(0));
+    m_calleeRegisters = 0;
+}
+
 BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* statements)
     : m_globalData(globalData)
     , m_statements(statements)
@@ -726,7 +775,6 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
             generator.Generate();
         }
     }
-        
 }
 
 PassRef<Register> BytecodeGenerator::NewTempRegister()
@@ -839,7 +887,11 @@ void BytecodeGenerator::Generate()
             EmitNode(statement);
         }
     }
-    
+    FinishMethod();
+}
+
+void BytecodeGenerator::FinishMethod()
+{
     for( int i=0; i<m_registers.size(); ++i )
     {
         Register* reg = m_registers.at(i).Ptr();
@@ -983,6 +1035,8 @@ void BytecodeGenerator::PatchConstantInt(int label, int value)
 
 void BytecodeGenerator::EmitBreak()
 {
+    CleanupRegisters();
+    
     EmitBytecode(op_jmp);
     assert(m_breakOrContinueHelper);
     m_breakOrContinueHelper->PushPatchBreakLabel(GetLabel());
@@ -991,6 +1045,8 @@ void BytecodeGenerator::EmitBreak()
 
 void BytecodeGenerator::EmitContinue()
 {
+    CleanupRegisters();
+    
     EmitBytecode(op_jmp);
     assert(m_breakOrContinueHelper);
     m_breakOrContinueHelper->PushPatchContinueLabel(GetLabel());
@@ -1002,13 +1058,22 @@ void MethodEnv::Run(RegisterValue* startingRegister)
     if (!m_compiled)
         printf("the method is not compiled \n");
         
-    if (!m_globalData->GetRegisterFile()->CanGrow(startingRegister + m_registerCount))
+    RegisterFile* registerFile = m_globalData->GetRegisterFile();
+    RegisterValue* lastUsedRegister = registerFile->GetLastUsed();
+        
+    if (!registerFile->CanGrow(startingRegister + m_registerCount))
     {
         printf("if I enter this functon I will get a stack overflow\n");
         exit(1);
     }
     
-    Interpret(m_globalData.Ptr(), startingRegister, &m_bytes);
+    Interpret(m_globalData, startingRegister, &m_bytes);
+    
+    if (!registerFile->CanShrink(lastUsedRegister))
+    {
+        printf("can't shrink???\n");
+        exit(1);
+    }
 }
 
 void MethodEnv::PrependArgumentsFromMethodNode(MethodNode* method)

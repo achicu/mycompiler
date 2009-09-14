@@ -14,6 +14,7 @@
 RegisterFile::RegisterFile()
 {
     m_block = new RegisterValue[MAX_BUFER_SIZE];
+    m_lastUsed = m_block;
     m_end = m_block + MAX_BUFER_SIZE;
 }
 
@@ -25,11 +26,23 @@ RegisterFile::~RegisterFile()
 bool RegisterFile::CanGrow(RegisterValue* to)
 {
     assert(to >= m_block);
-    return (to < m_end);
+    if (to < m_end)
+    {
+        m_lastUsed = to;
+        return true;
+    }
+    
+    return false;
 }
 
-bool RegisterFile::CanShring(RegisterValue* to)
+bool RegisterFile::CanShrink(RegisterValue* to)
 {
     assert (to < m_end);
-    return (to > m_block);
+    if (to >= m_block)
+    {
+        m_lastUsed = to;
+        return true;
+    }
+    
+    return false;
 }

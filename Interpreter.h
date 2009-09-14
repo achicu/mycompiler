@@ -14,13 +14,13 @@
 union Bytecode;
 class GlobalData;
 
-class RefCounted;
+class CollectorRef;
 
 union RegisterValue
 {
     int asInt;
     double asFloat;
-    RefCounted* asReference;
+    CollectorRef* asReference;
 };
 
 void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Bytecode>* buffer);

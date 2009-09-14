@@ -655,6 +655,8 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
             generator->EmitBytecode(op_init_object);
             generator->EmitRegister(valueRegister.Ptr());
             generator->EmitConstantInt(objectType->GetNextOffset());
+            std::string destructorName = std::string("$destroy_") + objectType->Name();
+            generator->EmitConstantString(destructorName);
         }
     }
     
@@ -1048,9 +1050,9 @@ Register* ForStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         generator->EmitNode(m_forBranch->at(i).Ptr());
     }
     
-    breakOrContinueHelper.SetContinueLabel(generator->GetLabel());
-    
     generator->CleanupRegisters();
+    
+    breakOrContinueHelper.SetContinueLabel(generator->GetLabel());
     
     if (m_expression3.Ptr())
     {

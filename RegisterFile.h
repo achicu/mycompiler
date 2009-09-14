@@ -18,13 +18,16 @@ public:
     ~RegisterFile();
     
     bool CanGrow(RegisterValue* to);
-    bool CanShring(RegisterValue* to);
+    bool CanShrink(RegisterValue* to);
     
     RegisterValue* GetBlock() const { return m_block; }
+    
+    RegisterValue* GetLastUsed() const { return m_lastUsed; }
     
 private:
     RegisterValue* m_block;
     RegisterValue* m_end;
+    RegisterValue* m_lastUsed;
 };
 
 #endif // REGISTER_FILE_H

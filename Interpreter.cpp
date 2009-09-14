@@ -10,6 +10,7 @@
 
 #include "BytecodeGenerator.h"
 #include "OpCodes.h"
+#include "Collector.h"
 #include <sstream>
 
 struct BytecodeMetaData
@@ -19,22 +20,34 @@ struct BytecodeMetaData
     int length;
 };
 
-class RefString: public RefCounted
+class RefString: public CollectorRef
 {
 public:
     RefString(std::string value)
         : Value (value)
     {
+        printf("created RefString %d\n", ++s_instances);
+    }
+    
+    ~RefString()
+    {
+        printf("destroyed RefString %d\n", --s_instances);
     }
     
     std::string Value;
+    
+private:
+    static int s_instances;
 };
 
-class RefObject: public RefCounted
+int RefString::s_instances = 0;
+
+class RefObject: public CollectorRef
 {
 public:
-    RefObject(int size)
+    RefObject(int size, MethodEnv* destructor)
         : Value(size)
+        , Destructor(destructor)
     {
         for(int i=0; i<size; ++i)
         {
@@ -43,6 +56,7 @@ public:
     }
     
     std::vector<RegisterValue> Value;
+    MethodEnv* Destructor;
 };
 
 static const int maximumReentrancy = 10000;
@@ -226,16 +240,14 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             R(1).asReference = new RefString(o.str());
         NEXT()
         OPCODE(op_coerce_string_int)
-            RefCounted* ref = R(1).asReference;
+            CollectorRef* ref = R(1).asReference;
             assert (ref);
             R(1).asInt = atoi(static_cast<RefString*>(ref)->Value.c_str());
-            ref->Deref();
         NEXT()
         OPCODE(op_coerce_string_float)
-            RefCounted* ref = R(1).asReference;
+            CollectorRef* ref = R(1).asReference;
             assert (ref);
             R(1).asFloat = atof(static_cast<RefString*>(ref)->Value.c_str());
-            ref->Deref();
         NEXT()
         OPCODE(op_assign)
             R(1) = R(2);
@@ -250,18 +262,19 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             printf("%s\n", static_cast<RefString*>(R(1).asReference)->Value.c_str());
         NEXT()
         OPCODE(op_inc_ref)
-            RefCounted* ref = R(1).asReference;
+            /*RefCounted* ref = R(1).asReference;
             assert(ref);
             ref->Ref();
+            */
         NEXT()
         OPCODE(op_dec_ref)
-            RefCounted* ref = R(1).asReference;
+            /*RefCounted* ref = R(1).asReference;
             if (ref != 0)
             {
                 if (ref->HasOneRef())
                     R(1).asReference = 0;
                 ref->Deref();
-            }
+            }*/
         NEXT()
         OPCODE(op_init_ref)
             R(1).asReference = 0;
@@ -305,7 +318,8 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         
         OPCODE(op_init_object)
-            RefObject* refObject = new RefObject(V(2).ConstantInt);
+            MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(3).ConstantStringIndex));
+            RefObject* refObject = new RefObject(V(2).ConstantInt, methodEnv);
             R(1).asReference = refObject;
         NEXT()
         
@@ -321,8 +335,8 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             if (R(2).asReference)
             {
                 RegisterValue value = static_cast<RefObject*>(R(2).asReference)->Value.at(V(3).ConstantInt);
-                if (value.asReference)
-                    value.asReference->Ref();
+                /*if (value.asReference)
+                    value.asReference->Ref();*/
                 R(1) = value;
             }
         NEXT()
@@ -332,12 +346,12 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
                 RegisterValue& objectValue = static_cast<RefObject*>(R(1).asReference)->Value.at(V(3).ConstantInt);
                 RegisterValue newValue = R(2);
                 
-                if (newValue.asReference)
+                /*if (newValue.asReference)
                     newValue.asReference->Ref();
 
                 if (objectValue.asReference)
                     objectValue.asReference->Deref();
-                    
+                */
                 objectValue = newValue;
             }
         NEXT()
