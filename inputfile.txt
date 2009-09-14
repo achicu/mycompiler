@@ -1,20 +1,44 @@
-vector.<int> vint = vector.<int>(20);
+# int i;
+# int j = 10;
 
-vint[0] = 1;
-
-debug vint;
-
-vector.<string> vstring = vector.<string>(10);
-
-int i;
-int j = 10;
-
-for(i=0; i < vstring.size ; i++)
+struct vectorstruct
 {
-	vstring[i] = "test ";
+	int a;
+	int b;
+	int c;
 }
 
+vector.<vectorstruct> vbig = vector.<vectorstruct>(5);
 
-debug vstring;
+# vector.<int> vint = vector.<int>(20);
+# 
+# vint[0] = 1;
+# 
+# debug vint;
+# 
+# vector.<string> vstring = vector.<string>(10);
+# 
+# for (i =0; i<vint.size; i++ )
+# {
+# 	debug vint[i]++;
+# }
+# 
+# debug vint;
+# 
+# for(i=0; i < vstring.size ; i++)
+# {
+# 	vstring[i] = "test ";
+# }
+# 
+# 
+# debug vstring;
+
+vbig[0] = vectorstruct();
+vbig[0].a = 1;
+vbig[0].b = 2;
+vbig[0].c = 3;
+
+debug vbig[0];
+debug vbig;
 
 debug "finished";
