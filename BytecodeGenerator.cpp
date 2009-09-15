@@ -413,8 +413,28 @@ Register* FloatType::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpco
     return dst;
 }
 
+Register* CollectorRefType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
+{
+    if (type2->IsCollectorRef() && op == binary_op_equal)
+    {
+        dst->SetType(generator->GetGlobalData()->GetIntType());
+        
+        generator->EmitBytecode(op_ref_equal);
+        generator->EmitRegister(dst);
+        generator->EmitRegister(reg1);
+        generator->EmitRegister(reg2);
+
+        return dst;
+    }
+    
+    return BuiltinType::EmitBinaryOpBytecode(generator, type2, op, reg1, reg2, dst); 
+}
+
 Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst)
 {
+    if (type2->IsCollectorRef() && type2 != this)
+        return CollectorRefType::EmitBinaryOpBytecode(generator, type2, op, reg1, reg2, dst);
+    
     if (!CoerceArgsIfNeeded(generator, type2, op, reg1, reg2))
     {
         // reverse if cannot do it
@@ -429,9 +449,12 @@ Register* StringType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* t
         case binary_op_plus:
             generator->EmitBytecode(op_string_plus);
         break;
+        case binary_op_equal:
+            generator->EmitBytecode(op_string_equal);
+            dst->SetType(generator->GetGlobalData()->GetIntType());
+            break;
         default:
-            printf("%s operation not supported on strings\n", BinaryOpcodeToString(op));
-            exit(1);
+            return CollectorRefType::EmitBinaryOpBytecode(generator, type2, op, reg1, reg2, dst);
     }
     
     generator->EmitRegister(dst);
@@ -801,11 +824,15 @@ GlobalData::GlobalData()
     : m_intType(AdoptRef(new IntType()))
     , m_floatType(AdoptRef(new FloatType()))
     , m_stringType(AdoptRef(new StringType()))
+    , m_nullType(AdoptRef(new NullType()))
 {
     m_typeList[m_intType->Name()] = m_intType.Ptr();
     m_typeList[m_floatType->Name()] = m_floatType.Ptr();
     m_typeList[m_stringType->Name()] = m_stringType.Ptr();
-    m_heap.AdoptRef(new Heap(GetRegisterFile()));
+    
+    m_stringType->AddInheritedType(m_nullType.Ptr());
+    
+    m_heap.AdoptRef(new Heap(this));
 }
 
 GlobalData::~GlobalData()
@@ -839,6 +866,8 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
     }
     
     RefPtr<Type> type (AdoptRef<Type>( new VectorType(completeName) ));
+    
+    type->AddInheritedType(m_nullType.Ptr());
     
     TypeNodeList* typeNodeList = typeNode->GetTypeNodeList();
     if (typeNodeList)
@@ -874,6 +903,14 @@ void GlobalData::DefineObjectType(StructNode* structNode)
     
     RefPtr<ObjectType> newType (AdoptRef(new ObjectType (completeName, extendedObjectType)));
     m_typeList[completeName] = newType.Ptr();
+    
+    newType->AddInheritedType(m_nullType.Ptr());
+    
+    while (extendedObjectType)
+    {
+        newType->AddInheritedType(extendedObjectType);
+        extendedObjectType = extendedObjectType->GetExtendedObjectType();
+    }
         
     StatementList* statementsList = structNode->GetDeclarations();
     if (statementsList)
@@ -1204,6 +1241,32 @@ Register* BytecodeGenerator::Coerce(Register* reg, Type* otherType)
     bool converted = false;
     Type* type = reg->GetType();
     assert(type != otherType);
+    
+    if (type->InheritsFrom(otherType))
+    {
+        // just convert the thing
+        dst->SetType(otherType);
+        return dst;
+    }
+    
+    if (otherType->IsCollectorRef() && type == m_globalData->GetNullType())
+    {
+        // upcasting null to the other type
+        dst->SetType(otherType);
+        return dst;
+    }
+    
+    if (otherType->InheritsFrom(type))
+    {
+        // just dynamic upcasting
+        EmitBytecode(op_dynamic_cast);
+        EmitRegister(dst);
+        EmitRegister(reg);
+        EmitConstantString(otherType->Name());
+        
+        dst->SetType(otherType);
+        return dst;
+    }
     
     if (m_globalData->GetIntType() == type)
     {

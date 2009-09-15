@@ -20,6 +20,14 @@ struct BytecodeMetaData
     int length;
 };
 
+Type* RefString::GetType() const
+{
+    return Heap::CellBlock(this)->heap->GetGlobalData()->GetStringType();
+}
+
+Type* RefObject::GetType() const { return m_type; }
+Type* RefVector::GetType() const { return m_type; }
+
 RefObject::RefObject(ObjectType* type)
     : m_type(type)
 {
@@ -156,6 +164,9 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         OPCODE(op_load_string_constant)
             R(1).asReference = new RefString(globalData->GetConstantString(V(2).ConstantStringIndex));
+        NEXT()
+        OPCODE(op_load_null)
+            R(1).asReference = 0;
         NEXT()
         OPCODE(op_int_plus)
             R(1).asInt = R(2).asInt + R(3).asInt;
@@ -449,6 +460,24 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
                 exit(1);
             }
             static_cast<RefVector*>(R(1).asReference)->WriteAtOffset<CollectorRef*>(R(3).asInt * sizeof(CollectorRef*), R(2).asReference);
+        NEXT()
+        
+        OPCODE(op_dynamic_cast)
+            Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(3).ConstantStringIndex));
+            assert(type->IsCollectorRef());
+            R(1).asReference = (R(2).asReference->GetType()->InheritsFrom(type)) ? R(2).asReference : 0;
+        NEXT()
+        
+        OPCODE(op_ref_equal)
+            R(1).asInt = (R(2).asReference == R(3).asReference) ? 1 : 0;
+        NEXT()
+        
+        OPCODE(op_string_equal)
+            if (!R(2).asReference)
+                printf("null string reference\n");
+            if (!R(3).asReference)
+                printf("null string reference\n");
+            R(1).asInt = (static_cast<RefString*>(R(3).asReference)->Value == static_cast<RefString*>(R(3).asReference)->Value) ? 1 : 0;
         NEXT()
         
 finished:

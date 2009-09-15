@@ -9,6 +9,7 @@
 #include "Collector.h"
 #include "RegisterFile.h"
 #include "Interpreter.h"
+#include "BytecodeGenerator.h"
 
 #include <mach/mach_port.h>
 #include <mach/mach_init.h>
@@ -118,8 +119,9 @@ bool Heap::Collect()
 
 void Heap::MarkRegisterFile()
 {
-    RegisterValue* r = m_registerFile->GetBlock();
-    RegisterValue* registersEnd = m_registerFile->GetLastUsed();
+    RegisterFile* registerFile = m_globalData->GetRegisterFile();
+    RegisterValue* r = registerFile->GetBlock();
+    RegisterValue* registersEnd = registerFile->GetLastUsed();
     
     const size_t lastCellOffset = sizeof(CollectorCell) * (CELLS_PER_BLOCK - 1);
     

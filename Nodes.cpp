@@ -111,6 +111,13 @@ std::string IdentifierNode::ToString() const
 Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 {
     assert(dst);
+    if (m_value == "null")
+    {
+        generator->EmitBytecode(op_load_null);
+        generator->EmitRegister(dst);
+        dst->SetType(generator->GetGlobalData()->GetNullType());
+        return dst;
+    }
     
     PassRef<Accessor> accessor = generator->GetProperty(m_value);
     if (!accessor.Ptr())

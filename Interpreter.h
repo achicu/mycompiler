@@ -29,6 +29,8 @@ public:
     }
     
     std::string Value;
+
+    virtual Type* GetType() const;
 };
 
 class RefObject: public CollectorRef
@@ -50,7 +52,10 @@ public:
     {
         *(reinterpret_cast<T*>(&m_buffer[offset])) = value;
     }
-    
+
+
+    virtual Type* GetType() const;
+
 private:
     ObjectType* m_type;
     char* m_buffer;
@@ -80,7 +85,9 @@ public:
     
     char* GetBuffer() const { return m_buffer; }
     int GetSize() const { return m_size; }
-    
+
+    virtual Type* GetType() const;
+
 private:
 
     void CheckSpace(int offset);

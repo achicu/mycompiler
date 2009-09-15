@@ -50,9 +50,16 @@ vbig[0].b = 2;
 vbig[0].c = 3;
 vbig[0].name = "my name is fanel";
 
-debug vbig[0];
 debug vbig;
 
 debug vbig[3];
+
+v2 t0 = vbig[3];
+debug t0;
+
+debug !(vbig[4] == null);
+
+debug "test" == "test";
+debug "test" == "test2";
 
 debug "finished";

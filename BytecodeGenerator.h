@@ -11,6 +11,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include "RefCounted.h"
 #include "RefPtr.h"
@@ -52,6 +53,7 @@ private:
 
 class Type: public RefCounted
 {
+    typedef std::set<Type*> TypeSet;
 public:
     Type(std::string name)
         : m_name(name)
@@ -69,7 +71,7 @@ public:
     virtual bool IsCollectorRef() const { return false; }
     virtual bool IsObjectType() const { return false; }
     virtual bool IsVectorRef() const { return false; }
-    
+        
     virtual int GetObjectSize() const { return 0; }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
@@ -78,9 +80,20 @@ public:
     
     TypeList* GetTemplateTypes() { return &m_templateTypes;}
 
+
+    void AddInheritedType(Type* type) { m_inheritance.insert(type); }
+    bool InheritsFrom(Type* type) const {
+        if (type == this)
+            return true;
+        
+        TypeSet::const_iterator iter = m_inheritance.find(type);
+        return iter != m_inheritance.end();
+    }
+    
 private:
     std::string m_name;
     TypeList m_templateTypes;
+    TypeSet m_inheritance;
 };
 
 class Accessor: public RefCounted
@@ -109,7 +122,6 @@ public:
     }
     
     virtual int GetPriority() const { return 0; }
-    
     virtual bool IsBuiltin() const { return true; }
 
 protected:
@@ -152,20 +164,42 @@ public:
 
 };
 
-class StringType: public BuiltinType
+class CollectorRefType: public BuiltinType
 {
 public:
-    StringType()
-        : BuiltinType("string")
+    CollectorRefType(std::string type)
+        : BuiltinType(type)
     {
     }
     
     virtual bool IsCollectorRef() const { return true; }
+    
+    virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
+};
+
+class StringType: public CollectorRefType
+{
+public:
+    StringType()
+        : CollectorRefType("string")
+    {
+    }
+    
     virtual int GetPriority() const { return 2; }
     virtual int GetObjectSize() const { return sizeof(RefString*); }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
 
+};
+
+class NullType: public CollectorRefType
+{
+public:
+    NullType()
+        : CollectorRefType("null")
+    {
+    }
+    
 };
 
 class ObjectProperty
@@ -207,13 +241,13 @@ private:
     int m_offset;
 };
 
-class ObjectType: public BuiltinType
+class ObjectType: public CollectorRefType
 {
     typedef std::map<std::string, ObjectProperty> PropertyMap;
 public:
     
     ObjectType(std::string name, ObjectType* extendedType)
-        : BuiltinType(name)
+        : CollectorRefType(name)
         , m_extendedType(extendedType)
         , m_nextOffset(extendedType ? extendedType->m_nextOffset : 0)
     {
@@ -233,6 +267,8 @@ public:
     void MarkObject(RefObject* ref);
     
     void DebugObject(GlobalData* globalData, RefObject* ref);
+    
+    ObjectType* GetExtendedObjectType() const { return m_extendedType.Ptr(); }
 
 private:
     RefPtr<ObjectType> m_extendedType;
@@ -258,11 +294,11 @@ private:
     RefPtr<Register> m_offsetRegister;
 };
 
-class VectorType: public BuiltinType
+class VectorType: public CollectorRefType
 {
 public:
     VectorType(std::string name)
-        : BuiltinType(name)
+        : CollectorRefType(name)
         , m_elementSize(0)
     {
     }
@@ -394,7 +430,7 @@ public:
     Type* GetIntType() const { return m_intType.Ptr(); }
     Type* GetFloatType() const { return m_floatType.Ptr(); }
     Type* GetStringType() const { return m_stringType.Ptr(); }
-//    Type* GetVectorType() const { return m_vectorType.Ptr(); }
+    Type* GetNullType() const { return m_nullType.Ptr(); }
 
     double GetConstantFloat(int i);
     std::string GetConstantString(int i);
@@ -413,7 +449,7 @@ private:
     RefPtr<IntType> m_intType;
     RefPtr<FloatType> m_floatType;
     RefPtr<StringType> m_stringType;
-//    RefPtr<VectorType> m_vectorType;
+    RefPtr<NullType> m_nullType;
 
     RegisterFile m_registerFile;
     RefPtr<Heap> m_heap;

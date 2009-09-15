@@ -60,6 +60,7 @@ public:
     Heap* heap;
 };
 
+class Type;
 class CollectorRef
 {
 public:
@@ -68,13 +69,15 @@ public:
     bool IsMarked() const;
     
     void* operator new(size_t size);
+    virtual Type* GetType() const = 0;
 };
 
+class GlobalData;
 class Heap: public RefCounted
 {
 public:
-    Heap(RegisterFile* registerFile)
-        : m_registerFile(registerFile)
+    Heap(GlobalData* globalData)
+        : m_globalData(globalData)
     {
         s_currentHeap = this;
     }
@@ -89,12 +92,14 @@ public:
     static void MarkCell(CollectorRef*);
     
     static Heap* CurrentHeap() { return s_currentHeap; }
+    
+    GlobalData* GetGlobalData() const { return m_globalData; }
 
 private:
     void MarkRegisterFile();
     bool CreateNewBlock();
     
-    RegisterFile* m_registerFile;
+    GlobalData* m_globalData;
     
     std::vector<CollectorBlock*> m_blocks;
     static Heap* s_currentHeap;

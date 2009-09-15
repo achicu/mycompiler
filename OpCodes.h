@@ -10,6 +10,7 @@
     MACRO(op_load_float_constant, "rf", 2) \
     MACRO(op_load_int_constant, "ri", 2) \
     MACRO(op_load_string_constant, "rs", 2) \
+    MACRO(op_load_null, "r", 1) \
     MACRO(op_int_plus, "rrr", 3) \
     MACRO(op_int_minus, "rrr", 3) \
     MACRO(op_int_multiply, "rrr", 3) \
@@ -68,7 +69,10 @@
     MACRO(op_load_float_vector_property, "rrr", 3) \
     MACRO(op_save_float_vector_property, "rrr", 3) \
     MACRO(op_load_ref_vector_property, "rrr", 3) \
-    MACRO(op_save_ref_vector_property, "rrr", 3)
+    MACRO(op_save_ref_vector_property, "rrr", 3) \
+    MACRO(op_dynamic_cast, "rrs", 3) \
+    MACRO(op_ref_equal, "rrr", 3) \
+    MACRO(op_string_equal, "rrr", 3)
     
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,
