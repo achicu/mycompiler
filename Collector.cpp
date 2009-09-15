@@ -36,7 +36,16 @@ void* Heap::Allocate(size_t size)
         if (freeList)
         {
             assert(freeList->u.freeCell.zeroIfFree == 0);
-            collectorBlock->freeList += freeList->u.freeCell.next;
+            
+            if (freeList->u.freeCell.next == 0)
+            {
+                collectorBlock->freeList = 0;
+            }
+            else
+            {
+                collectorBlock->freeList = reinterpret_cast<CollectorCell*>( reinterpret_cast<intptr_t>(freeList) + freeList->u.freeCell.next );
+            }
+            
              ++collectorBlock->usedCells;
             return freeList;
         }
@@ -78,15 +87,17 @@ bool Heap::Collect()
         {
             // free the item at i
             CollectorCell* const cell = &collectorBlock->cells[i];
+            
             if (cell->u.freeCell.zeroIfFree != 0 && !collectorBlock->marked.Get(i))
             {
                 CollectorRef* const refObject = reinterpret_cast<CollectorRef*>(cell);
                 refObject->~CollectorRef();
                 
                 cell->u.freeCell.zeroIfFree = 0;
+                cell->u.freeCell.next = 0;
                 if (lastFreeCell)
                 {
-                    lastFreeCell->u.freeCell.next = cell - lastFreeCell;
+                    lastFreeCell->u.freeCell.next = reinterpret_cast<intptr_t>(cell) - reinterpret_cast<intptr_t>(lastFreeCell);
                 } else {
                     collectorBlock->freeList = cell;
                 }
@@ -96,11 +107,11 @@ bool Heap::Collect()
                     assert(blockNextFreeCell != cell);
                     if (blockNextFreeCell > cell)
                     {
-                        cell->u.freeCell.next = blockNextFreeCell - cell;
+                        cell->u.freeCell.next = reinterpret_cast<intptr_t>(blockNextFreeCell) - reinterpret_cast<intptr_t>(cell);
                     }
                     else
                     {
-                        blockNextFreeCell->u.freeCell.next = cell - blockNextFreeCell;
+                        blockNextFreeCell->u.freeCell.next = reinterpret_cast<intptr_t>(cell) - reinterpret_cast<intptr_t>(blockNextFreeCell);
                         blockNextFreeCell = 0;
                     }
                 }
@@ -109,6 +120,12 @@ bool Heap::Collect()
                 ++numberCleaned;
             }
         }
+        
+        if (collectorBlock->freeList > &collectorBlock->cells[CELLS_PER_BLOCK - 1])
+            collectorBlock->freeList = 0;
+        
+        if (collectorBlock->cells[CELLS_PER_BLOCK - 1].u.freeCell.zeroIfFree == 0)
+            collectorBlock->cells[CELLS_PER_BLOCK - 1].u.freeCell.next = 0;
     }
     
     return numberCleaned > 0;
@@ -172,8 +189,10 @@ bool Heap::CreateNewBlock()
     for (int i=0; i<CELLS_PER_BLOCK; i++)
     {
         block->cells[i].u.freeCell.zeroIfFree = 0;
-        block->cells[i].u.freeCell.next = sizeof(CollectorCell);
+        block->cells[i].u.freeCell.next = sizeof(block->cells[0]);
     }
+    
+    block->cells[CELLS_PER_BLOCK - 1].u.freeCell.next = 0;
     
     m_blocks.push_back(block);
     return true;

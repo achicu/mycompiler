@@ -62,4 +62,14 @@ debug !(vbig[4] == null);
 debug "test" == "test";
 debug "test" == "test2";
 
+vector.<vector.<int>> dvector = vector.<vector.<int>>(30000);
+
+int i;
+for (i=0; i<dvector.size; i++)
+{
+	dvector[i] = vector.<int>(1);
+}
+
+debug dvector;
+
 debug "finished";

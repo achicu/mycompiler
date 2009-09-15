@@ -51,6 +51,7 @@ RefVector::RefVector(VectorType* type, int size)
     : m_type(type)
     , m_size(size)
 {
+    assert(m_type);
     m_bufferSize = type->GetElementSize() * size;
     m_buffer = new char[m_bufferSize];
     memset(m_buffer, 0, m_bufferSize);
@@ -63,6 +64,7 @@ RefVector::~RefVector()
     
 void RefVector::Mark()
 {
+    assert(m_type);
     m_type->MarkObject(this);
     CollectorRef::Mark();
 }
