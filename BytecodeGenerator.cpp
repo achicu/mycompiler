@@ -1277,9 +1277,6 @@ MethodEnv* BytecodeGenerator::Generate()
 void BytecodeGenerator::FinishMethod()
 {
     m_methodEnv->Compiled(m_maxRegisterCount, m_bytes);
-    
-    printf("Method: %s\n", m_methodEnv->GetName().c_str());
-    Disassemble(m_globalData.Ptr(), &m_bytes);
 }
 
 void BytecodeGenerator::EmitBytecode(int bytecode)
@@ -1476,6 +1473,16 @@ void MethodEnv::Run(RegisterValue* startingRegister)
     if (m_next.Ptr())
     {
         m_next->Run(startingRegister);
+    }
+}
+
+void MethodEnv::Debug() const
+{
+    printf("Method: %s\n", m_name.c_str());
+    Disassemble(m_globalData, &m_bytes);
+    if (m_next.Ptr())
+    {
+        m_next->Debug();
     }
 }
 

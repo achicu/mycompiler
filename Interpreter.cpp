@@ -424,6 +424,18 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             static_cast<VectorType*>(type)->DebugObject(globalData, static_cast<RefVector*>(R(2).asReference));
         NEXT()
         
+        OPCODE(op_debug_code)
+            CollectorRef* ref = R(1).asReference;
+            if (!ref)
+            {
+                printf ("null\n");
+            }
+            else
+            {
+                static_cast<RefCode*>(ref)->GetMethodEnv()->Debug();
+            }
+        NEXT()
+        
         OPCODE(op_init_ref)
             R(1).asReference = 0;
         NEXT()

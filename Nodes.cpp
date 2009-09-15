@@ -1021,6 +1021,10 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     {
         generator->EmitBytecode(op_debug_string);
     }
+    else if (generator->GetGlobalData()->GetCodeType() == type)
+    {
+        generator->EmitBytecode(op_debug_code);
+    }
     else if (type->IsObjectType())
     {
         generator->EmitBytecode(op_debug_object);

@@ -514,6 +514,8 @@ public:
     
     CollectorRef* GetRefCode() const { return m_refCode; }
     void SetRefCode(CollectorRef* refCode) { m_refCode = refCode; }
+    
+    void Debug() const;
 
 private:
     std::string m_name;

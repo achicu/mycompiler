@@ -80,7 +80,7 @@ code t = "int a=10;";
 t();
 
 tstring = t;
-debug tstring;
+//debug tstring;
 
 
 t += "debug a;";
@@ -88,11 +88,13 @@ t += "debug a;";
 t();
 
 tstring = t;
-debug tstring;
+//debug tstring;
 
 debug "finished";
 tstring = $main; 
-debug tstring;
+//debug tstring;
 
 int globalVariable = 10;
 $main += "debug 'again? ' + globalVariable;";
+
+debug $main;

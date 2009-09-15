@@ -18,7 +18,7 @@ struct BytecodeMetaData
     int length;
 };
 
-void Disassemble(GlobalData* globalData, std::vector<Bytecode>* buffer)
+void Disassemble(GlobalData* globalData, const std::vector<Bytecode>* buffer)
 {
     static BytecodeMetaData bytecodeList[op_last];
     static bool initialized = false;
