@@ -20,9 +20,37 @@ struct BytecodeMetaData
     int length;
 };
 
+class RefCode: public CollectorRef
+{
+public:
+    RefCode(MethodEnv* methodEnv)
+        : m_methodEnv (methodEnv)
+    {
+        assert(methodEnv->GetRefCode() == 0);
+        methodEnv->SetRefCode(this);
+    }
+    
+    ~RefCode()
+    {
+        m_methodEnv->SetRefCode(0);
+    }
+
+    virtual Type* GetType() const;
+    
+    MethodEnv* GetMethodEnv() const { return m_methodEnv.Ptr(); }
+    
+private:
+    RefPtr<MethodEnv> m_methodEnv; // global data will keep this alive
+};
+
 Type* RefString::GetType() const
 {
     return Heap::CellBlock(this)->heap->GetGlobalData()->GetStringType();
+}
+
+Type* RefCode::GetType() const
+{
+    return Heap::CellBlock(this)->heap->GetGlobalData()->GetCodeType();
 }
 
 Type* RefObject::GetType() const { return m_type; }
@@ -263,14 +291,114 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         OPCODE(op_coerce_string_int)
             CollectorRef* ref = R(2).asReference;
-            assert (ref);
+            if (!ref)
+            {
+                printf ("null string reference\n");
+                exit(1);
+            }
             R(1).asInt = atoi(static_cast<RefString*>(ref)->Value.c_str());
         NEXT()
         OPCODE(op_coerce_string_float)
             CollectorRef* ref = R(2).asReference;
-            assert (ref);
+            if (!ref)
+            {
+                printf ("null string reference\n");
+                exit(1);
+            }
             R(1).asFloat = atof(static_cast<RefString*>(ref)->Value.c_str());
         NEXT()
+        OPCODE(op_coerce_string_code)
+
+            CollectorRef* ref = R(2).asReference;
+            if (!ref)
+            {
+                printf ("null string reference\n");
+                exit(1);
+            }
+            
+            std::istringstream o(static_cast<RefString*>(ref)->Value);
+            RefPtr<ArenaNode> result;
+            
+            Arena parser(&o);
+            result = parser.Parse();
+            
+            if (!result.Ptr())
+            {
+                printf("parse error\n");
+                exit(1);
+            }
+            
+            std::ostringstream name;
+            name << std::string("$method") << globalData->GetNextMethodId();
+            
+            BytecodeGenerator generator(globalData, static_cast<StatementList*> (result.Ptr()), name.str());
+            RefPtr<MethodEnv> methodEnv = generator.Generate();
+            methodEnv->SetSourceCode( parser.GetSourceCode() );
+            R(1).asReference = new RefCode(methodEnv.Ptr());
+
+        NEXT()
+        
+        OPCODE(op_code_plus_string)
+            CollectorRef* refString = R(2).asReference;
+            if (!refString)
+            {
+                printf ("null string reference\n");
+                exit(1);
+            }
+            
+            CollectorRef* refCode = R(1).asReference;
+            if (!refCode)
+            {
+                printf ("null code reference\n");
+                exit(1);
+            }
+            
+            std::istringstream o(static_cast<RefString*>(refString)->Value);
+
+            RefPtr<ArenaNode> result;
+            
+            Arena parser(&o);
+            result = parser.Parse();
+            
+            if (!result.Ptr())
+            {
+                printf("parse error\n");
+                exit(1);
+            }
+            
+            std::ostringstream name;
+            name << std::string("$method") << globalData->GetNextMethodId();
+            
+            RefPtr<MethodEnv> methodEnv = globalData->GetMethod(name.str());
+            methodEnv->SetSourceCode( parser.GetSourceCode() );
+            
+            RefPtr<MethodEnv> lastMethodEnv = static_cast<RefCode*>(refCode)->GetMethodEnv()->GetLast();
+            lastMethodEnv->SetNext(methodEnv.Ptr());
+            
+            BytecodeGenerator generator(methodEnv.Ptr(), static_cast<StatementList*> (result.Ptr()), lastMethodEnv->GetLocalScope());
+            generator.Generate();
+            
+        NEXT()
+        
+        
+        OPCODE(op_coerce_code_string)
+            CollectorRef* ref = R(2).asReference;
+            if (!ref)
+            {
+                printf ("null code reference\n");
+                exit(1);
+            }
+            R(1).asReference = new RefString(static_cast<RefCode*>(ref)->GetMethodEnv()->GetSourceCode());
+        NEXT()
+        
+        OPCODE(op_load_method)
+            MethodEnv* methodEnv = globalData->GetDefinedMethod(globalData->GetConstantString(V(2).ConstantStringIndex));
+            if (methodEnv->GetRefCode())
+                R(1).asReference = methodEnv->GetRefCode();
+            else
+                R(1).asReference = new RefCode(methodEnv);
+        NEXT()
+        
         OPCODE(op_assign)
             R(1) = R(2);
         NEXT()
@@ -336,6 +464,16 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         OPCODE(op_call_method)
             MethodEnv* methodEnv = globalData->GetMethod(globalData->GetConstantString(V(2).ConstantStringIndex));
             methodEnv->Run(&R(1));
+        NEXT()
+        
+        OPCODE(op_call_code)
+            if (!R(1).asReference)
+            {
+                printf("null code reference\n");
+                exit(1);
+            }
+            MethodEnv* methodEnv = static_cast<RefCode*>(R(1).asReference)->GetMethodEnv();
+            methodEnv->Run(globalData->GetRegisterFile()->GetLastUsed() + 1);
         NEXT()
         
         OPCODE(op_init_object)

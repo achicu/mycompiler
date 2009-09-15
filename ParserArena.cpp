@@ -11,15 +11,14 @@
 #include <sstream>
 #include "BytecodeGenerator.h"
 
-Arena* Arena::s_active = 0;
+extern int yyparse(Arena* arena);
 
 ArenaNode::ArenaNode()
     : m_line(0)
     , m_endLine(0)
     , m_start(0)
     , m_end(0)
-{ 
-    Arena::Active()->RegisterNode(this); 
+{    
 }
 
 Register* ArenaNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
@@ -34,10 +33,11 @@ PassRef<Accessor> ArenaNode::GetAccessor(BytecodeGenerator* generator)
     return 0;
 }
 
-void Arena::RegisterNode(ArenaNode* ptr)
+ArenaNode* Arena::RegisterNode(ArenaNode* ptr)
 {
     assert(ptr->HasOneRef());
     push_back(AdoptRef(ptr));
+    return ptr;
 }
 
 std::string ArenaNode::LocationToString() const
@@ -50,4 +50,27 @@ std::string ArenaNode::LocationToString() const
 std::string ArenaNode::ToString() const
 {
     return "[ArenaNode]";
+}
+
+Arena::Arena(std::istream* inputStream)
+    : m_inputStream (inputStream)
+{
+}
+
+int Arena::Read(char* buffer, int max_size)
+{
+    int len = m_inputStream->readsome(buffer, max_size);
+    if (len)
+    {
+        m_sourceCode.write(buffer, len);
+    }
+    return len;
+}
+
+ArenaNode* Arena::Parse()
+{
+    InitScanner();
+    yyparse(this);
+    DestroyScanner();
+    return m_result.Ptr();
 }

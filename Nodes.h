@@ -19,7 +19,8 @@ enum AssignOpcode
     assign_op_plusplus_prefix,
     assign_op_minusminus_prefix,
     assign_op_plusplus_sufix,
-    assign_op_minusminus_sufix
+    assign_op_minusminus_sufix,
+    assign_op_plus_equal
 };
 
 enum UnaryOpcode
@@ -179,9 +180,10 @@ public:
 class AssignOpNode: public ArenaNode
 {
 public:
-    AssignOpNode(AssignOpcode op, ArenaNode* node1)
+    AssignOpNode(AssignOpcode op, ArenaNode* node1, ArenaNode* node2 = 0)
         : m_op(op)
         , m_node1(node1)
+        , m_node2(node2)
     {
     }
 
@@ -192,6 +194,7 @@ public:
 private:
     AssignOpcode m_op;
     RefPtr<ArenaNode> m_node1;
+    RefPtr<ArenaNode> m_node2;
 };
 
 class UnaryOpNode: public ArenaNode

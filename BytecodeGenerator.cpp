@@ -138,7 +138,7 @@ Register* Type::EmitUnaryOpBytecode(BytecodeGenerator* generator, UnaryOpcode op
     exit(1);
 }
 
-Register* Type::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst)
+Register* Type::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst)
 {
     // arbitrary type operators not supported, yet
     printf("Error: trying to do %s %s\n", AssignOpcodeToString(op), Name().c_str());
@@ -197,7 +197,7 @@ Register* IntType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type
     return dst;
 }
 
-Register* IntType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst)
+Register* IntType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst)
 {
     dst->SetType(this);
     
@@ -334,7 +334,7 @@ Register* FloatType::EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* ty
     return dst;
 }
 
-Register* FloatType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst)
+Register* FloatType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst)
 {
     dst->SetType(this);
     
@@ -820,17 +820,53 @@ int VectorType::GetElementSize()
     return m_elementSize;
 }
 
+Register* CodeType::EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst)
+{
+    dst->SetType(this);
+    
+    RefPtr<Register> source (accessor->EmitLoad(generator, 0));
+    RefPtr<Register> newValue;
+    
+    switch(op)
+    {
+        case assign_op_plus_equal:
+        {
+            RefPtr<Register> tempString (generator->NewTempRegister());
+            tempString = node2->EmitBytecode(generator, tempString.Ptr());
+            
+            generator->EmitBytecode(op_code_plus_string);
+            generator->EmitRegister(source.Ptr());
+            generator->EmitRegister(tempString.Ptr());
+            
+            dst = source.Ptr();
+        }
+        break;
+
+        default:
+            printf(" assign %s operation not supported on strings\n", AssignOpcodeToString(op));
+            exit(1);
+    }
+    
+    accessor->EmitSave(generator, source.Ptr(), 0);
+    
+    return dst;
+}
+
 GlobalData::GlobalData()
     : m_intType(AdoptRef(new IntType()))
     , m_floatType(AdoptRef(new FloatType()))
     , m_stringType(AdoptRef(new StringType()))
     , m_nullType(AdoptRef(new NullType()))
+    , m_codeType(AdoptRef(new CodeType()))
+    , m_nextMethodId(0)
 {
     m_typeList[m_intType->Name()] = m_intType.Ptr();
     m_typeList[m_floatType->Name()] = m_floatType.Ptr();
     m_typeList[m_stringType->Name()] = m_stringType.Ptr();
+    m_typeList[m_codeType->Name()] = m_codeType.Ptr();
     
     m_stringType->AddInheritedType(m_nullType.Ptr());
+    m_codeType->AddInheritedType(m_nullType.Ptr());
     
     m_heap.AdoptRef(new Heap(this));
 }
@@ -843,6 +879,17 @@ Type* GlobalData::GetDefinedType(std::string completeName)
 {
     TypeList::const_iterator iter = m_typeList.find( completeName );
     if (iter != m_typeList.end())
+    {
+        return (*iter).second.Ptr();
+    }
+    
+    return 0;
+}
+
+MethodEnv* GlobalData::GetDefinedMethod(std::string completeName)
+{
+    MethodList::const_iterator iter = m_methodList.find( completeName );
+    if (iter != m_methodList.end())
     {
         return (*iter).second.Ptr();
     }
@@ -938,7 +985,7 @@ MethodEnv* GlobalData::GetMethod(std::string name, MethodNode* methodNode)
         return (*iter).second.Ptr();
     }
     
-    RefPtr<MethodEnv> method (AdoptRef( new MethodEnv(this) ));
+    RefPtr<MethodEnv> method (AdoptRef( new MethodEnv(this, name) ));
     if (methodNode)
     {
         method->PrependArgumentsFromMethodNode(methodNode);
@@ -993,6 +1040,8 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
     
     m_localScope.AdoptRef(new Scope(parentScope));
     
+    m_methodEnv->SetLocalScope(m_localScope.Ptr());
+    
     DeclareArguments(method);
     m_calleeRegisters = m_registers.size();
     
@@ -1017,27 +1066,63 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
     }
 }
 
-// used to generate the destructors
-BytecodeGenerator::BytecodeGenerator(MethodEnv* methodEnv)
+// used to generate methods
+BytecodeGenerator::BytecodeGenerator(MethodEnv* methodEnv, StatementList* statements, Scope* scope)
     : m_globalData(methodEnv->GetGlobalData())
+    , m_statements(statements)
     , m_maxRegisterCount(0)
     , m_breakOrContinueHelper(0)
 {
     m_methodEnv = methodEnv;
-    m_localScope.AdoptRef(new Scope(0));
+
+    if (scope)
+    {
+        m_localScope = scope;
+        for (int i=scope->Count(); i > 0; --i)
+        {
+            NewRegister();
+        }
+    }
+    else
+    {
+        m_localScope.AdoptRef(new Scope(0));
+    }
+    
     m_calleeRegisters = 0;
+    
+    m_methodEnv->SetLocalScope(m_localScope.Ptr());
+
+    // declare variables;
+    if (statements)
+    {
+        for (int i=0; i<statements->size(); ++i)
+        {
+            StatementNode* statement = statements->at(i).Ptr();
+            
+            // methods cannot contain methods or structs
+            assert (!statement->IsMethodNode());
+            assert (!statement->IsStructNode());
+            
+            if (statement->IsVarStatement())
+            {
+                VarStatement* varStatement = static_cast<VarStatement*>(statement);
+                printf( " var : %s\n", varStatement->ToString().c_str());
+            }
+        }
+    }
 }
 
-BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* statements)
+BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* statements, std::string methodName)
     : m_globalData(globalData)
     , m_statements(statements)
     , m_maxRegisterCount(0)
     , m_breakOrContinueHelper(0)
 {
-    static std::string globalMethodName("$main");
-    m_methodEnv = globalData->GetMethod(globalMethodName);
+    m_methodEnv = globalData->GetMethod(methodName);
     
     m_localScope.AdoptRef(new Scope(0));
+    m_methodEnv->SetLocalScope(m_localScope.Ptr());
+    
     m_calleeRegisters = 0;
     
     // declare methods
@@ -1169,7 +1254,7 @@ Register* BytecodeGenerator::EmitNode(ArenaNode* node)
     return result;
 }
 
-void BytecodeGenerator::Generate()
+MethodEnv* BytecodeGenerator::Generate()
 {
     StatementList* statements = m_statements.Ptr();
     if (statements)
@@ -1183,19 +1268,18 @@ void BytecodeGenerator::Generate()
             EmitNode(statement);
         }
     }
+    
     FinishMethod();
+    
+    return m_methodEnv.Ptr();
 }
 
 void BytecodeGenerator::FinishMethod()
 {
     m_methodEnv->Compiled(m_maxRegisterCount, m_bytes);
-
+    
+    printf("Method: %s\n", m_methodEnv->GetName().c_str());
     Disassemble(m_globalData.Ptr(), &m_bytes);
-}
-
-PassRef<MethodEnv> BytecodeGenerator::GetMethodEnv()
-{
-    return m_methodEnv.Ptr();
 }
 
 void BytecodeGenerator::EmitBytecode(int bytecode)
@@ -1306,6 +1390,19 @@ Register* BytecodeGenerator::Coerce(Register* reg, Type* otherType)
             EmitBytecode(op_coerce_string_float);
             converted = true;
         }
+        else if (m_globalData->GetCodeType() == otherType)
+        {
+            EmitBytecode(op_coerce_string_code);
+            converted = true;
+        }
+    }
+    else if (m_globalData->GetCodeType() == type)
+    {
+        if (m_globalData->GetStringType() == otherType)
+        {
+            EmitBytecode(op_coerce_code_string);
+            converted = true;
+        }
     }
     
     if (converted)
@@ -1361,7 +1458,7 @@ void MethodEnv::Run(RegisterValue* startingRegister)
         
     RegisterFile* registerFile = m_globalData->GetRegisterFile();
     RegisterValue* lastUsedRegister = registerFile->GetLastUsed();
-        
+    
     if (!registerFile->CanGrow(startingRegister + m_registerCount))
     {
         printf("if I enter this functon I will get a stack overflow\n");
@@ -1374,6 +1471,11 @@ void MethodEnv::Run(RegisterValue* startingRegister)
     {
         printf("can't shrink???\n");
         exit(1);
+    }
+    
+    if (m_next.Ptr())
+    {
+        m_next->Run(startingRegister);
     }
 }
 

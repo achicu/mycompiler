@@ -96,6 +96,35 @@ Register* StringValueNode::EmitBytecode(BytecodeGenerator* generator, Register* 
 
 // ============= IdentifierNode =============
 
+class MethodAccessor: public Accessor
+{
+public:
+    MethodAccessor(Type* type, std::string name)
+        : Accessor(type)
+        , m_name(name)
+    {
+    }
+    
+    virtual Register* EmitLoad(BytecodeGenerator* generator, Register* dst) 
+    {
+        RefPtr<Register> where (dst ? dst : generator->NewTempRegister());
+        
+        generator->EmitBytecode(op_load_method);
+        generator->EmitRegister(where.Ptr());
+        generator->EmitConstantString(m_name);
+        
+        return where.Ptr();
+    }
+    
+    virtual Register* EmitSave(BytecodeGenerator* generator, Register* src, Register* dst)
+    {
+        return 0;
+    }
+
+private:
+    std::string m_name;
+};
+
 IdentifierNode::IdentifierNode(char* value)
     : m_value(value)
 {
@@ -119,6 +148,17 @@ Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* d
         return dst;
     }
     
+    MethodEnv* definedMethod = generator->GetGlobalData()->GetDefinedMethod(m_value);
+    if (definedMethod)
+    {
+        generator->EmitBytecode(op_load_method);
+        generator->EmitRegister(dst);
+        generator->EmitConstantString(m_value);
+        dst->SetType(generator->GetGlobalData()->GetCodeType());
+        
+        return dst;
+    }
+    
     PassRef<Accessor> accessor = generator->GetProperty(m_value);
     if (!accessor.Ptr())
     {
@@ -132,6 +172,12 @@ Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* d
 
 PassRef<Accessor> IdentifierNode::GetAccessor(BytecodeGenerator* generator)
 {
+    MethodEnv* definedMethod = generator->GetGlobalData()->GetDefinedMethod(m_value);
+    if (definedMethod)
+    {
+        return AdoptRef<Accessor>(new MethodAccessor(generator->GetGlobalData()->GetCodeType(), m_value));
+    }
+    
     PassRef<Accessor> accessor = generator->GetProperty(m_value);
     if (!accessor.Ptr())
     {
@@ -222,6 +268,29 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
             exit(1);
         }
     }
+        
+    PassRef<Accessor> codeObjectAccessor = generator->GetProperty(name);
+    if (codeObjectAccessor.Ptr())
+    {
+        if (!(codeObjectAccessor->GetType() == generator->GetGlobalData()->GetCodeType()))
+        {
+            printf("cannot call non-code property\n");
+        }
+        
+        if (m_arguments.Ptr() != 0 && m_arguments->size() != 0)
+        {
+            printf("cannot send arguments to code objects\n");
+            exit(1);
+        }
+        
+        RefPtr<Register> reg = codeObjectAccessor->EmitLoad(generator, 0);
+        
+        generator->EmitBytecode(op_call_code);
+        generator->EmitRegister(reg.Ptr());
+        
+        return 0;
+    }
+
 
     // this where the result will come (if we have one), otherwise it will be start of the next function frame
     RefPtr<Register> reg (generator->NewTempRegister());
@@ -357,6 +426,9 @@ std::string AssignOpNode::ToString() const
     if (m_node1.Ptr())
         o << m_node1->ToString() << " ";
     
+    if (m_node2.Ptr())
+        o << m_node2->ToString() << " ";
+    
     o << ")";
     
     return o.str();
@@ -373,7 +445,7 @@ Register* AssignOpNode::EmitBytecode(BytecodeGenerator* generator, Register* dst
     Type* type1 = accessor->GetType();
     assert(type1);
     
-    return type1->EmitAssignOpBytecode(generator, m_op, accessor.Ptr(), dst);
+    return type1->EmitAssignOpBytecode(generator, m_op, accessor.Ptr(), m_node2.Ptr(), dst);
 }
 
 // ============ UnaryOpNode ============

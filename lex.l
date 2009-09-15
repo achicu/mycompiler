@@ -1,34 +1,36 @@
 %option yylineno
 %option bison-bridge bison-locations
-
+%option reentrant
+%option noyywrap
+   
 %{
 
-#include <stdio.h>
+#include <iostream>
 #include "ParserArena.h"
 #include "Nodes.h"
-
 #include "parser.y.hh"
 
-extern void readNext(char* buf, int& result, int maxSize);
-#define YY_INPUT(buf,result,max_size) readNext(buf, result, max_size);
+#define YY_EXTRA_TYPE Arena*
 
 #define LOCATION_RESET(Loc)                  \
-  (Loc).first_column = (Loc).first_line = 1;  \
+  (Loc).first_column = (Loc).first_line = 1; \
   (Loc).last_column =  (Loc).last_line = 1;
 
 /* Advance of NUM lines. */
 #define LOCATION_LINES(Loc, Num)             \
-  (Loc).last_column = 1;                      \
+  (Loc).last_column = 1;                     \
   (Loc).last_line += Num;
 
 /* Restart: move the first cursor to the last position. */
 #define LOCATION_STEP(Loc)                   \
-  (Loc).first_column = (Loc).last_column;     \
+  (Loc).first_column = (Loc).last_column;    \
   (Loc).first_line = (Loc).last_line;
 
 /* Each time we match a string, move the end cursor to its end. */
 #define YY_USER_ACTION  yylloc->first_line = yylloc->last_line = yylineno; yylloc->last_column += yyleng;
 
+#define YY_INPUT(buf,result,max_size) \
+    result = yyextra->Read(buf, max_size);
 
 %}
 
@@ -60,7 +62,7 @@ continue                return CONTINUE_TOKEN;
 break                   return BREAK_TOKEN;
 [0-9]+\.[0-9]+          return FLOAT_NUMBER;
 [0-9]+                  return INTEGER_NUMBER;
-[a-zA-Z][a-zA-Z0-9]*    return IDENTIFIER;
+[a-zA-Z$][a-zA-Z0-9]*    return IDENTIFIER;
 \"([^\"]|\\\")*\"       return STRING_TOKEN;
 \'([^\']|\\\')*\'       return STRING_TOKEN;
 !                       return NOT;
@@ -75,6 +77,7 @@ break                   return BREAK_TOKEN;
 \|\|                    return OR_TOKEN;
 --                      return MINUSMINUS_TOKEN;
 \+\+                    return PLUSPLUS_TOKEN;
+\+=                     return ADD_EQUALS;
 \*                      return MULTIPLY;
 \/                      return DIVIDE;
 \+                      return PLUS;
@@ -91,3 +94,20 @@ break                   return BREAK_TOKEN;
 \]                      return SQUARE_BRACKET_END;
 
 %%
+
+void Arena::InitScanner()
+{
+    yylex_init(&m_scanner);
+    yyset_extra(this, m_scanner);
+}
+
+void Arena::DestroyScanner()
+{
+    yylex_destroy(m_scanner);
+}
+
+char* Arena::GetLexerText() const
+{
+    return yyget_text(m_scanner);
+}
+

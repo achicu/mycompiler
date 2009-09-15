@@ -76,7 +76,7 @@ public:
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode op, Register* reg1, Register* dst);
-    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst);
     
     TypeList* GetTemplateTypes() { return &m_templateTypes;}
 
@@ -142,7 +142,7 @@ public:
         
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
-    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst);
     
 };
 
@@ -160,7 +160,7 @@ public:
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
     virtual Register* EmitUnaryOpBytecode (BytecodeGenerator* generator, UnaryOpcode m_op, Register* reg1, Register* dst);
-    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, Register* dst);
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst);
 
 };
 
@@ -173,6 +173,7 @@ public:
     }
     
     virtual bool IsCollectorRef() const { return true; }
+    virtual int GetObjectSize() const { return sizeof(CollectorRef*); }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
 };
@@ -186,7 +187,6 @@ public:
     }
     
     virtual int GetPriority() const { return 2; }
-    virtual int GetObjectSize() const { return sizeof(RefString*); }
     
     virtual Register* EmitBinaryOpBytecode(BytecodeGenerator* generator, Type* type2, BinaryOpcode op, Register* reg1, Register* reg2, Register* dst);
 
@@ -256,8 +256,6 @@ public:
     int GetNextOffset(int size);
     
     virtual bool IsObjectType() const { return true; }
-    virtual bool IsCollectorRef() const { return true; }
-    virtual int GetObjectSize() const { return sizeof(RefObject*); }
     
     void PutProperty(GlobalData* globalData, std::string& name, Type* type);
     bool HasProperty(std::string& name);
@@ -274,6 +272,18 @@ private:
     RefPtr<ObjectType> m_extendedType;
     PropertyMap m_properties;
     int m_nextOffset;
+};
+
+class CodeType: public CollectorRefType
+{
+public:
+    
+    CodeType()
+        : CollectorRefType("code")
+    {
+    }
+    
+    virtual Register* EmitAssignOpBytecode (BytecodeGenerator* generator, AssignOpcode op, Accessor* accessor, ArenaNode* node2, Register* dst);
 };
 
 class VectorAccessor: public Accessor
@@ -303,7 +313,6 @@ public:
     {
     }
     
-    virtual bool IsCollectorRef() const { return true; }
     virtual bool IsVectorRef() const { return true; }
     
     PassRef<Accessor> GetRegisterAccessor(Register* offsetRegister, Register* forReg);
@@ -312,7 +321,6 @@ public:
     
     void DebugObject(GlobalData* globalData, RefVector* ref);
     
-    virtual int GetObjectSize() const { return sizeof(RefVector*); }
     int GetElementSize();
     Type* GetElementType();
 
@@ -396,6 +404,8 @@ public:
         return property.Ptr();
     }
     
+    int Count() const { return m_properties.size(); }
+    
 private:
     Property* LookupProperty(std::string& name, int& scopeNumber) const;
 
@@ -421,6 +431,7 @@ public:
     virtual ~GlobalData();
     
     Type* GetDefinedType(std::string completeName);
+    MethodEnv* GetDefinedMethod(std::string completeName);
     Type* GetTypeOf(TypeNode* typeNode);
     MethodEnv* GetMethod(std::string name, MethodNode* methodNode = 0);
     
@@ -431,6 +442,7 @@ public:
     Type* GetFloatType() const { return m_floatType.Ptr(); }
     Type* GetStringType() const { return m_stringType.Ptr(); }
     Type* GetNullType() const { return m_nullType.Ptr(); }
+    Type* GetCodeType() const { return m_codeType.Ptr(); }
 
     double GetConstantFloat(int i);
     std::string GetConstantString(int i);
@@ -438,6 +450,8 @@ public:
     RegisterFile* GetRegisterFile() { return &m_registerFile; }
     
     void DefineObjectType(StructNode* structNode);
+    
+    int GetNextMethodId() { return ++m_nextMethodId; }
     
 private:
     TypeList m_typeList;
@@ -450,17 +464,21 @@ private:
     RefPtr<FloatType> m_floatType;
     RefPtr<StringType> m_stringType;
     RefPtr<NullType> m_nullType;
+    RefPtr<CodeType> m_codeType;
 
     RegisterFile m_registerFile;
     RefPtr<Heap> m_heap;
+    int m_nextMethodId;
     
 };
 
 class MethodEnv: public RefCounted
 {
 public:
-    MethodEnv(GlobalData* globalData)
-        : m_globalData(globalData)
+    MethodEnv(GlobalData* globalData, std::string name)
+        : m_name (name)
+        , m_globalData(globalData)
+        , m_refCode(0)
         , m_registerCount(0)
         , m_compiled(false)
     {
@@ -482,10 +500,30 @@ public:
     
     GlobalData* GetGlobalData() const { return m_globalData; }
 
+    std::string GetName() const { return m_name; }
+    
+    std::string GetSourceCode() const { return  m_next.Ptr() ? m_sourceCode + m_next->GetSourceCode() : m_sourceCode ; }
+    void SetSourceCode(std::string sourceCode) { m_sourceCode = sourceCode; }
+    
+    void SetLocalScope(Scope* scope) { m_localScope = scope; }
+    Scope* GetLocalScope() { return m_localScope.Ptr(); }
+    
+    MethodEnv* GetNext() const { return m_next.Ptr(); }
+    MethodEnv* GetLast() { return m_next.Ptr() != 0 ? m_next->GetLast() : this; }
+    void SetNext(MethodEnv* next) { m_next = next; }
+    
+    CollectorRef* GetRefCode() const { return m_refCode; }
+    void SetRefCode(CollectorRef* refCode) { m_refCode = refCode; }
+
 private:
+    std::string m_name;
+    std::string m_sourceCode;
     std::vector<Bytecode> m_bytes;
     GlobalData* m_globalData; // globaldata keeps a reference to this object (circular references)
     RefPtr<Type> m_returnType;
+    RefPtr<Scope> m_localScope;
+    RefPtr<MethodEnv> m_next;
+    CollectorRef* m_refCode;
     TypeList m_argumentsType;
     int m_registerCount;
     bool m_compiled;
@@ -499,8 +537,8 @@ class BytecodeGenerator
 public:
 
     BytecodeGenerator(GlobalData* globalData, Scope* parentScope, MethodNode* method);
-    BytecodeGenerator(GlobalData* globalData, StatementList* statements);
-    BytecodeGenerator(MethodEnv* methodEnv);
+    BytecodeGenerator(GlobalData* globalData, StatementList* statements, std::string methodName = "$main");
+    BytecodeGenerator(MethodEnv* methodEnv, StatementList* statements, Scope* siblingScope);
 
     void CleanupRegisters();
 
@@ -511,7 +549,7 @@ public:
     Register* EmitNode(ArenaNode* node, Register* destination);
     Register* EmitNode(ArenaNode* node);
     
-    void Generate();
+    MethodEnv* Generate();
     void FinishMethod();
 
     GlobalData* GetGlobalData() const { return m_globalData.Ptr(); }
@@ -534,9 +572,6 @@ public:
     void EmitBreak();
     void EmitContinue();
     
-    PassRef<MethodEnv> GetMethodEnv();
-    
-
 private:  
     void DeclareArguments(MethodNode* method);
     void DeclareProperty(std::string& name, Type* type);

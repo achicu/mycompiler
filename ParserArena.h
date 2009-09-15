@@ -10,6 +10,8 @@
 #define PARSER_ARENA_H
 
 #include <vector>
+#include <iostream>
+#include <sstream>
 #include <assert.h>
 #include "RefCounted.h"
 #include "RefPtr.h"
@@ -52,20 +54,32 @@ private:
 class Arena: public std::vector< RefPtr<ArenaNode> >
 {
 public:
-    Arena() { m_oldActive = s_active; s_active = this; }
-    ~Arena() { s_active = m_oldActive; }
+    Arena(std::istream* inputStream);
     
-    void RegisterNode(ArenaNode* node);
+    ArenaNode* RegisterNode(ArenaNode* node);
     
-    static Arena* Active() { return s_active; }
+    ArenaNode* Parse();
     
+    void* GetScanner() const { return m_scanner; }
+    
+    char* GetLexerText() const;
     void SetResult(ArenaNode* result) { m_result = result; }
-    ArenaNode* Result() const { return m_result.Ptr(); }
     
+    std::string GetSourceCode() const { return m_sourceCode.str(); }
+
+    int Read(char* buffer, int max_size);
+
+
 private:
-    static Arena* s_active;
-    Arena* m_oldActive;
+    
     RefPtr<ArenaNode> m_result;
+    
+    void InitScanner();
+    void DestroyScanner();
+    
+    void* m_scanner;
+    std::istream* m_inputStream;
+    std::ostringstream m_sourceCode;
 };
 
 #endif // PARSER_ARENA_H

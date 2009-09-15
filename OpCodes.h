@@ -11,6 +11,7 @@
     MACRO(op_load_int_constant, "ri", 2) \
     MACRO(op_load_string_constant, "rs", 2) \
     MACRO(op_load_null, "r", 1) \
+    MACRO(op_load_method, "rs", 2) \
     MACRO(op_int_plus, "rrr", 3) \
     MACRO(op_int_minus, "rrr", 3) \
     MACRO(op_int_multiply, "rrr", 3) \
@@ -40,6 +41,9 @@
     MACRO(op_coerce_float_string, "rr", 2) \
     MACRO(op_coerce_string_int, "rr", 2) \
     MACRO(op_coerce_string_float, "rr", 2) \
+    MACRO(op_coerce_string_code, "rr", 2) \
+    MACRO(op_coerce_code_string, "rr", 2) \
+    MACRO(op_code_plus_string, "rr", 2) \
     MACRO(op_assign, "rr", 2) \
     MACRO(op_debug_int, "r", 1) \
     MACRO(op_debug_float, "r", 1) \
@@ -55,6 +59,7 @@
     MACRO(op_load_scope, "rii", 3) \
     MACRO(op_save_scope, "rii", 3) \
     MACRO(op_call_method, "rs", 2) \
+    MACRO(op_call_code, "r", 1) \
     MACRO(op_init_object, "rs", 2) \
     MACRO(op_load_int_object_property, "rri", 3) \
     MACRO(op_save_int_object_property, "rri", 3) \
