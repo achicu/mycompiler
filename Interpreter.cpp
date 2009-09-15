@@ -411,6 +411,23 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         OPCODE(op_debug_string)
             printf("%s\n", static_cast<RefString*>(R(1).asReference)->Value.c_str());
         NEXT()
+        
+        OPCODE(op_read_int)
+            int inputInt;
+            scanf("%d", &inputInt);
+            R(1).asInt = inputInt;
+        NEXT()
+        OPCODE(op_read_float)
+            double inputFloat;
+            scanf("%lf", &inputFloat);
+            R(1).asFloat = inputFloat;
+        NEXT()
+        OPCODE(op_read_string)
+            char inputString[1024];
+            fgets (inputString, sizeof(inputString), stdin);
+            inputString[strlen(inputString) - 1] = 0;
+            R(1).asReference = new RefString(std::string(inputString));
+        NEXT()
 
         OPCODE(op_debug_object)
             Type* type = globalData->GetDefinedType(globalData->GetConstantString(V(1).ConstantStringIndex));

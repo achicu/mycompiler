@@ -54,6 +54,7 @@ extends                 return EXTENDS;
 method                  return METHOD;
 return                  return RETURN_TOKEN;
 debug                   return DEBUG_TOKEN;
+read                    return READ_TOKEN;
 if                      return IF_TOKEN;
 else                    return ELSE_TOKEN;
 while                   return WHILE_TOKEN;

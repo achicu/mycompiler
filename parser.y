@@ -36,7 +36,7 @@ NodeType* AdoptIntoArena(Arena* arena, NodeType* node)
 %token METHOD EQUALS MULTIPLY DIVIDE PLUS MINUS INTEGER_NUMBER FLOAT_NUMBER IDENTIFIER BRACKET_START BRACKET_END SEMICOLON
 %token STRING_TOKEN PARAN_START PARAN_END LESS MORE COMMA SQUARE_BRACKET_START SQUARE_BRACKET_END DEBUG_TOKEN MORE_EQUALS
 %token RETURN_TOKEN EXTENDS STRUCT IF_TOKEN ELSE_TOKEN NOT WHILE_TOKEN D_EQUALS LESS_EQUALS BIT_AND_TOKEN AND_TOKEN BIT_OR_TOKEN OR_TOKEN
-%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN CONTINUE_TOKEN BREAK_TOKEN FOR_TOKEN DOT DOT_LESS ADD_EQUALS
+%token PLUSPLUS_TOKEN MINUSMINUS_TOKEN CONTINUE_TOKEN BREAK_TOKEN FOR_TOKEN DOT DOT_LESS ADD_EQUALS READ_TOKEN
 
 %nonassoc IF_WITHOUT_ELSE
 %nonassoc ELSE_TOKEN
@@ -60,7 +60,7 @@ NodeType* AdoptIntoArena(Arena* arena, NodeType* node)
 %type <callNode> CallExpression
 %type <nodeList> ExpressionList
 %type <statementNode> EmptyStatement GlobalStatement InMethodStatement InStructStatement InBlockStatement
-%type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement IfStatement
+%type <statementNode> MethodNode ExpressionStatement VariableDeclarationStatement ReturnStatement StructNode DebugStatement ReadStatement IfStatement
 %type <statementNode> WhileStatement ForStatement ContinueStatement BreakStatement
 %type <statementList> GlobalStatementList InMethodStatementList InStructStatementList InBlockStatementList BlockOrStatement
 %type <typeNodeList> TypeDeclarationList
@@ -118,6 +118,7 @@ InBlockStatement:
 | ExpressionStatement
 | ReturnStatement
 | DebugStatement
+| ReadStatement
 | IfStatement
 | WhileStatement
 | ForStatement
@@ -159,6 +160,10 @@ ForStatement:
 
 DebugStatement:
  DEBUG_TOKEN Expression SEMICOLON { $$ = A(DebugStatement($2)); DBG($$, @1, @3); }
+;
+
+ReadStatement:
+ READ_TOKEN LeftSide SEMICOLON { $$ = A(ReadStatement($2)); DBG($$, @1, @3); }
 ;
 
 StructNode:

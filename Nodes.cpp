@@ -1046,6 +1046,64 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     return dst;
 }
 
+// ============ ReadStatement ============
+
+std::string ReadStatement::ToString() const
+{
+    std::ostringstream o;
+    o << "[ReadStatement ";
+
+    if (m_expression.Ptr())
+        o << m_expression->ToString();
+        
+    o << " " << LocationToString();
+    
+    o << "]";
+    
+    return o.str();
+}
+
+Register* ReadStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
+{
+    assert(m_expression.Ptr());
+    
+    RefPtr<Accessor> accessor = m_expression->GetAccessor(generator);
+    
+    Type* type = accessor->GetType();
+    
+    RefPtr<Register> reg = generator->NewTempRegister();
+    
+    if (!type)
+    {
+        printf("cannot read type void\n");
+        exit(1);
+    }
+    else if (generator->GetGlobalData()->GetIntType() == type)
+    {
+        generator->EmitBytecode(op_read_int);
+    }
+    else if (generator->GetGlobalData()->GetFloatType() == type)
+    {
+        generator->EmitBytecode(op_read_float);
+    }
+    else if (generator->GetGlobalData()->GetStringType() == type)
+    {
+        generator->EmitBytecode(op_read_string);
+    }
+    else
+    {
+        printf("read failed for type \"%s\"\n", type->Name().c_str());
+        exit(1);
+    }
+    
+    generator->EmitRegister(reg.Ptr());
+    
+    accessor->EmitSave(generator, reg.Ptr(), 0);
+    
+    return 0;
+}
+
+
 // ============ IfStatement ============
 
 std::string IfStatement::ToString() const
