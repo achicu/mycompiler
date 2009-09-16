@@ -1,0 +1,32 @@
+testing variable declaration
+testing variable declaration with initializer
+testing structure definition
+testing structure downcasting
+1
+testing structure upcasting
+testing 'if'
+#if test1 pass
+#if test2 pass
+#if test3 pass
+#if test4 pass
+testing 'for'
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+testing methods definition
+method1 called
+10
+without casting
+10
+11
+11
+20
+101.000000
+finished
