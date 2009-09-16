@@ -10,6 +10,9 @@ method dosomething()
 
 // forgot to add debug a in dosomething
 
-dosomething += "debug a;";
+dosomething += "write a;";
+
+
+dosomething += "number c;debug 'write a number:';read c;debug a + c;";
 
 dosomething();
