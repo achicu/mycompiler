@@ -1,108 +1,15 @@
-# # # int i;
-# # # int j = 10;
-# # 
-# # struct v2
-# # {
-# # 	string name;
-# # }
-# # 
-# # struct vectorstruct extends v2
-# # {
-# # 	int a;
-# # 	number b;
-# # 	string c;
-# # 	vectorstruct d;
-# # }
-# # 
-# # vector.<vectorstruct> vbig = vector.<vectorstruct>(5);
-# # 
-# # # vector.<int> vint = vector.<int>(20);
-# # # 
-# # # vint[0] = 1;
-# # # 
-# # # debug vint;
-# # # 
-# # # vector.<string> vstring = vector.<string>(10);
-# # # 
-# # # for (i =0; i<vint.size; i++ )
-# # # {
-# # # 	debug vint[i]++;
-# # # }
-# # # 
-# # # debug vint;
-# # # 
-# # # for(i=0; i < vstring.size ; i++)
-# # # {
-# # # 	vstring[i] = "test ";
-# # # }
-# # # 
-# # # 
-# # # debug vstring;
-# # 
-# # vectorstruct v3 = vectorstruct();
-# # vbig[3] = v3;
-# # 
-# # v3.name = "dubios cum merge treaba asta " + (10 + 20 / 2 + 30);
-# # 
-# # vbig[0] = vectorstruct();
-# # vbig[0].a = 1;
-# # vbig[0].b = 2;
-# # vbig[0].c = 3;
-# # vbig[0].name = "my name is fanel";
-# # 
-# # debug vbig;
-# # 
-# # debug vbig[3];
-# # 
-# # v2 t0 = vbig[3];
-# # debug t0;
-# # 
-# # debug !(vbig[4] == null);
-# # 
-# # debug "test" == "test";
-# # debug "test" == "test2";
-# # 
-# # vector.<vector.<int>> dvector = vector.<vector.<int>>(30);
-# # 
-# # int i;
-# # for (i=0; i<dvector.size; i++)
-# # {
-# # 	dvector[i] = vector.<int>(1);
-# # }
-# # 
-# # debug dvector;
-# # 
-# # debug "finished";
-# 
-# string tstring;
-# code t = "int a=10;";
-# 
-# t();
-# 
-# tstring = t;
-# //debug tstring;
-# 
-# 
-# t += "debug a;";
-# 
-# t();
-# 
-# tstring = t;
-# //debug tstring;
-# 
-# debug "finished";
-# tstring = $main; 
-# //debug tstring;
-# 
-# int globalVariable = 10;
-# $main += "debug 'again? ' + globalVariable;";
-# 
-# debug $main;
+method dosomething()
+{
+	int a = 10;
+	int b;
+	for (b=0; b<20; b++)
+	{
+		a = a + 40.0 / (3 + b);
+	}
+}
 
-string name;
-read name;
+// forgot to add debug a in dosomething
 
-int nota;
-read nota;
+dosomething += "debug a;";
 
-debug "Elevul " + name + " a luat nota " + nota;
+dosomething();

@@ -1060,7 +1060,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
             if (statement->IsVarStatement())
             {
                 VarStatement* varStatement = static_cast<VarStatement*>(statement);
-                printf( " var : %s\n", varStatement->ToString().c_str());
+                DeclareProperty(varStatement->Identifier()->Value(), m_globalData->GetTypeOf(varStatement->GetTypeNode()));
             }
         }
     }
@@ -1106,7 +1106,7 @@ BytecodeGenerator::BytecodeGenerator(MethodEnv* methodEnv, StatementList* statem
             if (statement->IsVarStatement())
             {
                 VarStatement* varStatement = static_cast<VarStatement*>(statement);
-                printf( " var : %s\n", varStatement->ToString().c_str());
+                DeclareProperty(varStatement->Identifier()->Value(), m_globalData->GetTypeOf(varStatement->GetTypeNode()));
             }
         }
     }
