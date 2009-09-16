@@ -1,0 +1,32 @@
+
+Entitati folosite in proiect:
+
+Flex/Bison parser
+ArenaNode/Arena
+Nodes
+GlobalData
+MethodEnv
+BytecodeGenerator
+Interpreter
+Collector
+
+Interpretarea unui program trece prin mai multe stari. Initial compilatorul citeste fisierul si cu ajutorul unui parser generat cu flex si bison construieste un tree de noduri. Legatura dintre aceste noduri este pastrata pe baza de numararea de referinte.
+
+Rezultatul va fi o lista de instructiuni. Aceasta este folosita de BytecodeGenerator pentru a construi corpul metodei. Prima metoda contine tot fisierul si se numeste "$main". Fiecare nod generat in pasul anterior "stie" sa-si "emita" codul necesar executiei. Flowul informatiei intre noduri se face prin "registri". Registrii sunt o lista de tipuri de date. Aceasta lista este intretinuta de BytecodeGenerator. 
+
+Intepretorul va citi fiecare bytecode generat anterior si executa folosind o lista de registri. Apelarea de metode se face prin construirea unei liste cu parametri. De exemplu
+
+=================================================================
+Registrul 1		variabila "nume" de tipul string	
+Registrul 2		variabila "prenume" de tipul string
+=================================================================
+
+Sa presupunem ca programul doreste sa concateneze nume cu prenume. Se va folosi un registru separat, temporar, pentru stocarea rezultatului. Pentru a apela o metoda folosind rezultatul, se va apela metoda plecand de la registrul rezultat.
+
+=================================================================
+Registrul 1		variabila "nume" de tipul string	
+Registrul 2		variabila "prenume" de tipul string
+Registrul 3		nume + prenume					-> Registrul 1 pentru metoda 2
+=================================================================
+
+

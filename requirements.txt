@@ -1,0 +1,3 @@
+Pentru regenerarea parserului aveti nevoie de flex/bison. Pentru compilare pe MacOSX e necesar XCODE, iar pe windows Visual Studio 8.
+
+Executia necesita WindowsXP sau MacOSX.

@@ -1,0 +1,65 @@
+Tipuri de date predefinite
+======================
+
+* int - Corespondentul lui int din C++
+* number - Corespondentul lui double din C++
+* string - Sir de caractere
+* vector.<?> unde ? este orice tip definit anterior
+* code penru functii
+
+Variabilele de tip int si number nu au o valoarea initiala definita. E necesara initializarea lor. Toate celelalte tipuri sunt initializate cu valoarea "null".
+
+Sintaxa de definire de variabile este:
+TipStructura nume [= valoare initiala];
+
+Definirea de sructuri
+======================
+
+Sintaxa:
+struct nume [extends nume_structura_extinsa]
+{
+	[lista de variabile]
+}
+
+Fiecare nume de strctura devene si functie. Aceasta functie poarta rolul de constructor.
+
+Fiecare membru din lista este de forma:
+TipStructura nume;
+
+Accesul la proprietati se face prin opeartorul punct "." Eg.:
+
+struct Record
+{
+	int number;
+} 
+
+Record record1 = record1();
+record1.number = 10;
+
+Variabile predefinite
+======================
+
+Toate functiile devin variabile de tipul "code". Se poate adauga functionalitate la orice functie prin operatia "+=". Eg. $main += "debug 'test';";
+Toate structurile devin functii constructor. Acestea returneaza un obiect gol de tipul structurii referentiate.
+Toate tipurile de vectori sunt functii constructor. Acestea primesc un parametru de tip int care va constitui dimensiunea structurii initializate.
+
+Instructiuni suportate
+======================
+read expresie; -> Expresie poate fi de tip int, number sau string.
+write expresie; -> Expresie poate fi orice tip definit in primul paragraf.
+
+Instructiuni de control al executiei
+======================
+
+Instructiunea IF. Sintaxa:
+if (expresie) ListaInstructiuni [else ListaInstructiuni] unde ListaInstructiuni este un block de forma { Instructiune1; Instructiune2; ... } sau o singura instructiune.
+
+Instructiunea FOR. Sintaxa:
+for(expresie;expresie;expresie) ListaInstructiuni;
+
+Instructiunea WHILE. Sintaxa:
+while(expresie) ListaInstructiuni;
+
+break; -> iese din cel mai apropiat bloc for sau while; 
+continue; -> trece la urmatorul pas din cel mai apropiat bloc for sau while; 
+
