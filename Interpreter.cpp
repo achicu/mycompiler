@@ -676,6 +676,10 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             R(1).asInt = (static_cast<RefString*>(R(3).asReference)->Value == static_cast<RefString*>(R(3).asReference)->Value) ? 1 : 0;
         NEXT()
         
+        OPCODE(op_debug_line)
+            printf("line %d\n", V(1).ConstantInt);
+        NEXT()
+        
 #if PLATFORM(WIN)
         default:
             assert(false);

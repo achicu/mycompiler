@@ -1,0 +1,124 @@
+debug $main;
+
+// comment line
+# comment line
+
+debug "testing variable declaration";
+int a1;
+number a2;
+vector.<int> a3;
+vector.<vector.<string>> a4;
+string a5;
+code a6;
+
+debug "testing variable declaration with initializer";
+int b1 = 10;
+number b2 = 20.454;
+vector.<int> b3 = vector.<int> (20);
+vector.<vector.<string>> b4 = vector.<vector.<string>>(30);
+string b5 = "b5";
+string b51 = 'b51';
+code b6 = "debug 'works';";
+
+debug "testing structure definition";
+struct test
+{
+	int a1;
+	number a2;
+	vector.<int> a3;
+	vector.<vector.<string>> a4;
+	string a5;
+	code a6;
+	test a7;
+}
+
+struct test2 extends test
+{
+	test2 a8;
+	vector.<test2> a9;
+}
+
+test2 test2var = test2();
+test2var.a5 = "test2var.a5";
+
+debug "testing structure downcasting";
+test testvar = test2var;
+debug test2var.a5 == testvar.a5;
+
+debug "testing structure upcasting";
+test2var.a8 = testvar;
+
+debug "testing 'if'";
+
+if (1)
+{
+	debug "#if test1 pass";
+}
+
+if (!1)
+	debug "#if test2 fail";
+else
+	debug "#if test2 pass";
+	
+if (!1)
+{
+	debug "#if test3 fail";
+}
+else
+{
+	debug "#if test3 pass";
+}
+
+if (1 == 0)
+{
+	debug "#if test4 fail";
+}
+else if (1 == 2)
+{
+	debug "#if test4 fail";
+}
+else
+{
+	debug "#if test4 pass";
+}
+
+debug "testing 'for'";
+
+int i=0;
+for (i=0; i<10; i++);
+for (i=0; i<10; i++) { }
+for (i=0; i<10; i++) { debug i; }
+i=0;
+for (; i<10; i++);
+for (i=0; ; i++) if (i>10) break;
+for (;;) break;
+i=0;
+for(;;) if(i==0) { i=2; continue; } else { break; }
+
+while(1) break;
+while(0);
+i=0;
+while(1) if(i==0) { i=2; continue; } else { break; }
+
+debug "testing methods definition";
+
+method emptymethod() {}
+method method1() { debug "method1 called"; }
+method method2(int a) { debug a; }
+method method3(string a) { debug a; }
+int method4(int a) { return a + 1; }
+int method5(vector.<int> a) { return a.size; }
+number method6(int a, int b, int c, int d) { return a + b + c + d + 1; }
+
+emptymethod();
+method1();
+method2(10);
+method3("without casting");
+method3(10); // automatic casting
+debug method4(10);
+debug method4("10"); // automatic casting
+debug method5(vector.<int>(20));
+debug method6(10, 20, 30, 40);
+
+debug "finished";
+

@@ -163,7 +163,7 @@ Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* d
     PassRef<Accessor> accessor = generator->GetProperty(m_value);
     if (!accessor.Ptr())
     {
-        printf("Property not found %s\n", m_value.c_str());
+        printf("Property not found %s %s\n", m_value.c_str(), LocationToString().c_str());
         exit(1);
     }
 
@@ -182,7 +182,7 @@ PassRef<Accessor> IdentifierNode::GetAccessor(BytecodeGenerator* generator)
     PassRef<Accessor> accessor = generator->GetProperty(m_value);
     if (!accessor.Ptr())
     {
-        printf("Property not found %s\n", m_value.c_str());
+        printf("Property not found %s %s\n", m_value.c_str(), LocationToString().c_str());
         exit(1);
     }
     return accessor;
@@ -241,7 +241,7 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         {
             if (!m_arguments.Ptr() || m_arguments->size() != 1)
             {
-                printf("vector initialization needs 1 size argument\n");
+                printf("vector initialization needs 1 size argument %s\n", LocationToString().c_str());
                 exit(1);
             }
             
@@ -265,7 +265,7 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         }
         else
         {
-            printf("cannot initialize builtin types");
+            printf("cannot initialize builtin types %s\n", LocationToString().c_str());
             exit(1);
         }
     }
@@ -275,12 +275,12 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     {
         if (!(codeObjectAccessor->GetType() == generator->GetGlobalData()->GetCodeType()))
         {
-            printf("cannot call non-code property\n");
+            printf("cannot call non-code property %s\n", LocationToString().c_str());
         }
         
         if (m_arguments.Ptr() != 0 && m_arguments->size() != 0)
         {
-            printf("cannot send arguments to code objects\n");
+            printf("cannot send arguments to code objects %s\n", LocationToString().c_str());
             exit(1);
         }
         
@@ -308,7 +308,7 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     const TypeList* typeList = methodEnv->GetArgumentsType();
     if (typeList->size() > 0 && ((!m_arguments.Ptr()) || (m_arguments->size() != typeList->size())))
     {
-        printf("invalid arguments count");
+        printf("invalid arguments count %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -326,6 +326,12 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         {
             Register* nice_to_have_dst = argumentRegisters.at(i).Ptr();
             RefPtr<Register> actual_dst = m_arguments->at(i)->EmitBytecode(generator, nice_to_have_dst);
+            
+            if (actual_dst->GetType() != typeList->at(i).Ptr())
+            {
+                actual_dst = generator->Coerce(actual_dst.Ptr() , typeList->at(i).Ptr());
+            }
+            
             if (actual_dst.Ptr() != nice_to_have_dst)
             {
                 // it returned another register
@@ -335,12 +341,6 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
                 generator->EmitRegister(actual_dst.Ptr());
                 nice_to_have_dst->SetType(actual_dst->GetType());
             }
-            
-            if (nice_to_have_dst->GetType() != typeList->at(i).Ptr())
-            {
-                printf("invalid argument number %d\n", i);
-                exit(1);
-            }
         }
         
         generator->CleanupRegisters();
@@ -349,7 +349,7 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     {
         if (typeList->size() > 0)
         {
-            printf("invalid arguments count");
+            printf("invalid arguments count %s\n", LocationToString().c_str());
             exit(1);
         }
     }
@@ -530,7 +530,7 @@ Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     if (!reg2->GetType())
     {
-        printf("void type assignment\n");
+        printf("void type assignment %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -570,7 +570,7 @@ PassRef<Accessor> AccessorNode::GetAccessor(BytecodeGenerator* generator)
     RefPtr<Accessor> accessor = m_node->GetAccessor(generator);
     if (!accessor.Ptr())
     {
-        printf("invalid referenced object\n");
+        printf("invalid referenced object %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -580,7 +580,7 @@ PassRef<Accessor> AccessorNode::GetAccessor(BytecodeGenerator* generator)
     assert(dst->GetType());
     if (!dst->GetType()->IsVectorRef())
     {
-        printf("invalid offset accessor getter on non vector type\n");
+        printf("invalid offset accessor getter on non vector type %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -627,7 +627,7 @@ PassRef<Accessor> DotNode::GetAccessor(BytecodeGenerator* generator)
     RefPtr<Accessor> accessor = m_node->GetAccessor(generator);
     if (!accessor.Ptr())
     {
-        printf("invalid referenced object\n");
+        printf("invalid referenced object %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -637,7 +637,7 @@ PassRef<Accessor> DotNode::GetAccessor(BytecodeGenerator* generator)
     assert(dst->GetType());
     if (!dst->GetType()->IsObjectType())
     {
-        printf("invalid property getter on non object type\n");
+        printf("invalid property getter on non object type %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -652,7 +652,7 @@ Register* DotNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     RefPtr<Accessor> leftAccessor = m_node->GetAccessor(generator);
     if (!leftAccessor.Ptr())
     {
-        printf("invalid referenced object\n");
+        printf("invalid referenced object %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -672,13 +672,13 @@ Register* DotNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
             return dst;
         }
         
-        printf("invalid property getter on vector object\n");
+        printf("invalid property getter on vector object %s\n", LocationToString().c_str());
         exit(1);
     }
     
     if (!leftDst->GetType()->IsObjectType())
     {
-        printf("invalid property getter on non object type\n");
+        printf("invalid property getter on non object type %s\n", LocationToString().c_str());
         exit(1);
     }
     
@@ -839,7 +839,7 @@ Register* VarStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
         
         if (!initializedValue->GetType())
         {
-            printf("void type assignment\n");
+            printf("void type assignment %s\n", LocationToString().c_str());
             exit(1);
         }
         
@@ -926,7 +926,7 @@ Register* ReturnStatement::EmitBytecode(BytecodeGenerator* generator, Register* 
         RefPtr<Accessor> returnValueAccessor = generator->GetProperty(returnValue, true);
         if (!returnValueAccessor.Ptr())
         {
-            printf("No return type defined\n");
+            printf("No return type defined %s\n", LocationToString().c_str());
             exit(1);
         }
         
@@ -1013,7 +1013,7 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     
     if (!type)
     {
-        printf("cannot debug type void\n");
+        printf("cannot debug type void %s\n", LocationToString().c_str());
         exit(1);
     }
     else if (generator->GetGlobalData()->GetIntType() == type)
@@ -1044,7 +1044,7 @@ Register* DebugStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     }
     else
     {
-        printf("debug failed for type \"%s\"\n", type->Name().c_str());
+        printf("debug failed for type \"%s\" %s\n", type->Name().c_str(), LocationToString().c_str());
         exit(1);
     }
     
@@ -1082,7 +1082,7 @@ Register* ReadStatement::EmitBytecode(BytecodeGenerator* generator, Register* ds
     
     if (!type)
     {
-        printf("cannot read type void\n");
+        printf("cannot read type void %s\n", LocationToString().c_str());
         exit(1);
     }
     else if (generator->GetGlobalData()->GetIntType() == type)
@@ -1099,7 +1099,7 @@ Register* ReadStatement::EmitBytecode(BytecodeGenerator* generator, Register* ds
     }
     else
     {
-        printf("read failed for type \"%s\"\n", type->Name().c_str());
+        printf("read failed for type \"%s\" %s\n", type->Name().c_str(), LocationToString().c_str());
         exit(1);
     }
     
@@ -1165,7 +1165,8 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     for (unsigned i=0; i<m_ifBranch->size(); i++)
     {
-        generator->EmitNode(m_ifBranch->at(i).Ptr());
+        if (m_ifBranch->at(i).Ptr())
+            generator->EmitNode(m_ifBranch->at(i).Ptr());
     }
     
     generator->CleanupRegisters();
@@ -1178,7 +1179,8 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     {
         for (unsigned i=0; i<m_elseBranch->size(); i++)
         {
-            generator->EmitNode(m_elseBranch->at(i).Ptr());
+            if (m_elseBranch->at(i).Ptr())
+                generator->EmitNode(m_elseBranch->at(i).Ptr());
         }
         generator->CleanupRegisters();
     }
@@ -1245,7 +1247,8 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     assert(m_whileBranch.Ptr());
     for (unsigned i=0; i<m_whileBranch->size(); i++)
     {
-        generator->EmitNode(m_whileBranch->at(i).Ptr());
+        if (m_whileBranch->at(i).Ptr())
+            generator->EmitNode(m_whileBranch->at(i).Ptr());
     }
     
     generator->CleanupRegisters();
@@ -1334,7 +1337,8 @@ Register* ForStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
     assert(m_forBranch.Ptr());
     for (unsigned i=0; i<m_forBranch->size(); i++)
     {
-        generator->EmitNode(m_forBranch->at(i).Ptr());
+        if (m_forBranch->at(i).Ptr())
+            generator->EmitNode(m_forBranch->at(i).Ptr());
     }
     
     generator->CleanupRegisters();

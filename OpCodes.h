@@ -84,7 +84,8 @@
     MACRO(op_save_ref_vector_property, "rrr", 3) \
     MACRO(op_dynamic_cast, "rrs", 3) \
     MACRO(op_ref_equal, "rrr", 3) \
-    MACRO(op_string_equal, "rrr", 3)
+    MACRO(op_string_equal, "rrr", 3) \
+    MACRO(op_debug_line, "i", 1)
     
 
 #define ENUM_MACRO(opcode, ignore, ignore2) opcode,

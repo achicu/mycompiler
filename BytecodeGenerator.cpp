@@ -1246,7 +1246,13 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type, bool isAr
 
 Register* BytecodeGenerator::EmitNode(ArenaNode* node, Register* dst)
 {
-    return node->EmitBytecode(this, dst);
+    dst = node->EmitBytecode(this, dst);
+    
+    // enable this for debugging
+    //EmitBytecode(op_debug_line);
+    //EmitConstantInt(node->Line());
+    
+    return dst;
 }
 
 Register* BytecodeGenerator::EmitNode(ArenaNode* node)
@@ -1331,6 +1337,12 @@ Register* BytecodeGenerator::Coerce(Register* reg, Type* otherType)
     if (type->InheritsFrom(otherType))
     {
         // just convert the thing
+        if (dst != reg)
+        {
+            EmitBytecode(op_assign);
+            EmitRegister(dst);
+            EmitRegister(reg);
+        }
         dst->SetType(otherType);
         return dst;
     }
