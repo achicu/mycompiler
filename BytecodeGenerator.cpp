@@ -1230,13 +1230,13 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
     reg->SetType(type);
     property->SetRegister(reg.Ptr());
     
-    if (type->IsCollectorRef())
+    if (type->IsCollectorRef() && reg->Number() >= m_calleeRegisters)
     {
         EmitBytecode(op_init_ref);
         EmitRegister(reg.Ptr());
     }
     
-    printf("Variable %s has register %d\n", name.c_str(), property->GetRegister()->Number());
+    // printf("Variable %s has register %d\n", name.c_str(), property->GetRegister()->Number());
 }
 
 Register* BytecodeGenerator::EmitNode(ArenaNode* node, Register* dst)

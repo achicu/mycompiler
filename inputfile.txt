@@ -1,18 +1,54 @@
-method dosomething()
+struct NumeMaterie
 {
-	int a = 10;
-	int b;
-	for (b=0; b<20; b++)
-	{
-		a = a + 40.0 / (3 + b);
-	}
+  string materie;
 }
 
-// forgot to add debug a in dosomething
+struct Nota extends NumeMaterie  // va obtine automat proprietatile lui NumeMaterie
+{
+  int nota;
+}
 
-dosomething += "write a;";
+struct Student
+{
+  string nume;
+  vector.<Nota> note;
+}
 
+vector.<Student> studenti = vector.<Student>(10); // 10 e dimensiunea vectorului
+studenti[0] = Student();
+studenti[0].nume = "Marian";
+studenti[0].note = vector.<Nota>(1);
+studenti[0].note[0] = Nota();
+studenti[0].note[0].materie = "MDS";
+studenti[0].note[0].nota = "5"; // <- programul converteste automat "5" la int 5
 
-dosomething += "number c;debug 'write a number:';read c;debug a + c;";
+string afisareNote(vector.<Nota> note)
+{
+    string rezultat = "";
+    int i;
+    for (i=0; i<note.size; ++i)
+    {
+        if (i>0)
+          rezultat = rezultat + ", ";
+        rezultat = rezultat + note[i].materie + " - " + note[i].nota;
+    }
+    return rezultat;
+}
 
-dosomething();
+string afisareStudent(Student student)
+{
+   return student.nume  + ": " + afisareNote(student.note);
+}
+method afisareStudenti(vector.<Student> studenti)
+{
+    int i=0;
+    while (i<studenti.size)
+    {
+        if (!(studenti[i] == null))
+        {
+            debug afisareStudent(studenti[i]);
+        }
+        i++;
+    }
+}
+afisareStudenti(studenti);

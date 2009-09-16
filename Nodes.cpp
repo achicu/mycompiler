@@ -293,12 +293,13 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 
 
     // this where the result will come (if we have one), otherwise it will be start of the next function frame
-    RefPtr<Register> reg (generator->NewTempRegister());
+    RefPtr<Register> reg;
 
     MethodEnv* methodEnv = generator->GetGlobalData()->GetMethod(name);
     
     if (methodEnv->GetReturnType())
     {
+        reg = generator->NewTempRegister();
         reg->SetType(methodEnv->GetReturnType());
         dst = reg.Ptr();
     }
@@ -316,6 +317,9 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
         std::vector<RefPtr<Register> > argumentRegisters;
         for (int i=0; i<m_arguments->size(); ++i)
             argumentRegisters.push_back(generator->NewTempRegister());
+        
+        if (!reg.Ptr())
+            reg = argumentRegisters.at(0).Ptr();
         
         for (int i=0; i<m_arguments->size(); ++i)
         {
