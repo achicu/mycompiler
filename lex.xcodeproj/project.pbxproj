@@ -27,9 +27,9 @@
 			fileType = sourcecode.lex;
 			isEditable = 1;
 			outputFiles = (
-				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc",
+				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cpp",
 			);
-			script = "lex -o${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc ${INPUT_FILE_NAME}";
+			script = "lex -o${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cpp ${INPUT_FILE_NAME}";
 		};
 		504FBECD105987140069DD2C /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
@@ -37,10 +37,10 @@
 			fileType = sourcecode.yacc;
 			isEditable = 1;
 			outputFiles = (
-				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc",
-				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.hh",
+				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cpp",
+				"${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.hpp",
 			);
-			script = "bison -t -d -v -o${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cc ${INPUT_FILE_NAME}";
+			script = "bison -t -d -v -o${DERIVED_FILES_DIR}/${INPUT_FILE_NAME}.cpp ${INPUT_FILE_NAME}";
 		};
 /* End PBXBuildRule section */
 
@@ -74,11 +74,12 @@
 		504FC4B8105B9C510069DD2C /* Disassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Disassembler.h; sourceTree = "<group>"; };
 		504FC4B9105B9C510069DD2C /* Disassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Disassembler.cpp; sourceTree = "<group>"; };
 		504FC73C105BD1B70069DD2C /* Interpreter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Interpreter.h; sourceTree = "<group>"; };
-		504FC73D105BD1B70069DD2C /* Interpreter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Interpreter.cpp; sourceTree = "<group>"; };
+		504FC73D105BD1B70069DD2C /* Interpreter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Interpreter.cpp; sourceTree = "<group>"; tabWidth = 4; usesTabs = 0; };
 		504FCCDE105CC1B20069DD2C /* RegisterFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterFile.h; sourceTree = "<group>"; };
 		504FCCDF105CC1B20069DD2C /* RegisterFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterFile.cpp; sourceTree = "<group>"; };
 		504FD02A105E13090069DD2C /* Collector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Collector.h; sourceTree = "<group>"; };
 		504FD02B105E13090069DD2C /* Collector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Collector.cpp; sourceTree = "<group>"; };
+		504FDBF6106164270069DD2C /* Platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Platform.h; sourceTree = "<group>"; };
 		8DD76F6C0486A84900D96B5E /* lex */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = lex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6859E8B029090EE04C91782 /* lex.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = lex.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -107,6 +108,7 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				504FDBF6106164270069DD2C /* Platform.h */,
 				504FBC8E10582DFB0069DD2C /* parser.y */,
 				08FB7796FE84155DC02AAC07 /* main.cpp */,
 				504FBB6E105824010069DD2C /* lex.l */,

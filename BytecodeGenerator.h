@@ -19,6 +19,7 @@
 #include "RegisterFile.h"
 #include "Collector.h"
 #include "Interpreter.h"
+#include "OpCodes.h"
 
 class BytecodeGenerator;
 class Type;
@@ -415,11 +416,11 @@ private:
 
 union Bytecode
 {
-    int Code;
-    int RegisterNumber;
-    int ConstantFloatIndex;
-    int ConstantInt;
-    int ConstantStringIndex;
+    OpCode Code;
+    unsigned RegisterNumber;
+    unsigned ConstantFloatIndex;
+    unsigned ConstantInt;
+    unsigned ConstantStringIndex;
 };
 
 class GlobalData: public RefCounted
@@ -435,8 +436,8 @@ public:
     Type* GetTypeOf(TypeNode* typeNode);
     MethodEnv* GetMethod(std::string name, MethodNode* methodNode = 0);
     
-    int GetConstantFloatIndex(double d);
-    int GetConstantStringIndex(std::string d);
+    unsigned GetConstantFloatIndex(double d);
+    unsigned GetConstantStringIndex(std::string d);
     
     Type* GetIntType() const { return m_intType.Ptr(); }
     Type* GetFloatType() const { return m_floatType.Ptr(); }
@@ -444,8 +445,8 @@ public:
     Type* GetNullType() const { return m_nullType.Ptr(); }
     Type* GetCodeType() const { return m_codeType.Ptr(); }
 
-    double GetConstantFloat(int i);
-    std::string GetConstantString(int i);
+    double GetConstantFloat(unsigned i);
+    std::string GetConstantString(unsigned i);
     
     RegisterFile* GetRegisterFile() { return &m_registerFile; }
     
@@ -556,7 +557,7 @@ public:
 
     GlobalData* GetGlobalData() const { return m_globalData.Ptr(); }
 
-    void EmitBytecode(int bytecode);
+    void EmitBytecode(OpCode bytecode);
     void EmitRegister(Register*);
     void EmitConstantFloat(double value);
     void EmitConstantInt(int value);
@@ -568,15 +569,15 @@ public:
     
     int GetMaxRegisterCount() const { return m_maxRegisterCount; }
     
-    int GetLabel();
-    void PatchConstantInt(int label, int value);
+    unsigned GetLabel();
+    void PatchConstantInt(unsigned label, int value);
     
     void EmitBreak();
     void EmitContinue();
     
 private:  
     void DeclareArguments(MethodNode* method);
-    void DeclareProperty(std::string& name, Type* type);
+    void DeclareProperty(std::string& name, Type* type, bool isArgument = false);
     
     RefPtr<GlobalData> m_globalData;
     RefPtr<Scope> m_localScope;
@@ -585,8 +586,8 @@ private:
     
     std::vector<Bytecode> m_bytes;
     std::vector<RefPtr<Register> > m_registers;
-    int m_calleeRegisters;
-    int m_maxRegisterCount;
+    unsigned m_calleeRegisters;
+    unsigned m_maxRegisterCount;
     
     BreakOrContinueHelper* m_breakOrContinueHelper;
 };
@@ -623,10 +624,10 @@ public:
 private:
     void Patch()
     {
-        for (int i=0; i<m_continuePatches.size(); i++)
+        for (unsigned i=0; i<m_continuePatches.size(); i++)
             m_generator->PatchConstantInt(m_continuePatches.at(i), m_continueLabel);
         
-        for (int i=0; i<m_breakPatches.size(); i++)
+        for (unsigned i=0; i<m_breakPatches.size(); i++)
             m_generator->PatchConstantInt(m_breakPatches.at(i), m_breakLabel);
     }
     

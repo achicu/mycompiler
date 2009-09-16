@@ -1,14 +1,20 @@
 %option yylineno
+%option noyywrap
 %option bison-bridge bison-locations
 %option reentrant
-%option noyywrap
    
 %{
+
+#include "Platform.h"
 
 #include <iostream>
 #include "ParserArena.h"
 #include "Nodes.h"
-#include "parser.y.hh"
+#include "parser.y.hpp"
+
+#if PLATFORM(WIN)
+int isatty(int) { return 0; }
+#endif
 
 #define YY_EXTRA_TYPE Arena*
 

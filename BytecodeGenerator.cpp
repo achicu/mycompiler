@@ -5,6 +5,7 @@
  *  Created by Alexandru Chiculita on 9/11/09.
  *
  */
+#include "Platform.h"
 
 #include "BytecodeGenerator.h"
 #include "Disassembler.h"
@@ -919,7 +920,7 @@ Type* GlobalData::GetTypeOf(TypeNode* typeNode)
     TypeNodeList* typeNodeList = typeNode->GetTypeNodeList();
     if (typeNodeList)
     {
-        for (int i=0; i<typeNodeList->size(); ++i)
+        for (unsigned i=0; i<typeNodeList->size(); ++i)
             type->AddTemplateType( GetTypeOf (typeNodeList->at(i).Ptr()) );
     }
     
@@ -962,7 +963,7 @@ void GlobalData::DefineObjectType(StructNode* structNode)
     StatementList* statementsList = structNode->GetDeclarations();
     if (statementsList)
     {
-        for (int i=0; i<statementsList->size(); ++i)
+        for (unsigned i=0; i<statementsList->size(); ++i)
         {
             StatementNode* statement = statementsList->at(i).Ptr();
             if (!statement)
@@ -996,9 +997,9 @@ MethodEnv* GlobalData::GetMethod(std::string name, MethodNode* methodNode)
     return method.Ptr();
 }
 
-int GlobalData::GetConstantFloatIndex(double d)
+unsigned GlobalData::GetConstantFloatIndex(double d)
 {
-    for (int i=0; i<m_floatConstants.size(); ++i)
+    for (unsigned i=0; i<m_floatConstants.size(); ++i)
         if (m_floatConstants[i] == d)
             return i;
 
@@ -1006,9 +1007,9 @@ int GlobalData::GetConstantFloatIndex(double d)
     return m_floatConstants.size() - 1;
 }
 
-int GlobalData::GetConstantStringIndex(std::string d)
+unsigned GlobalData::GetConstantStringIndex(std::string d)
 {
-    for (int i=0; i<m_stringConstants.size(); ++i)
+    for (unsigned i=0; i<m_stringConstants.size(); ++i)
         if (m_stringConstants[i] == d)
             return i;
 
@@ -1016,13 +1017,13 @@ int GlobalData::GetConstantStringIndex(std::string d)
     return m_stringConstants.size() - 1;
 }
 
-double GlobalData::GetConstantFloat(int i)
+double GlobalData::GetConstantFloat(unsigned i)
 {
     assert(i < m_floatConstants.size());
     return m_floatConstants.at(i);
 }
 
-std::string GlobalData::GetConstantString(int i)
+std::string GlobalData::GetConstantString(unsigned i)
 {
     assert(i < m_stringConstants.size());
     return m_stringConstants.at(i);
@@ -1049,9 +1050,11 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, Scope* parentScope,
     StatementList* statements = m_statements.Ptr();
     if (statements)
     {
-        for (int i=0; i<statements->size(); ++i)
+        for (unsigned i=0; i<statements->size(); ++i)
         {
             StatementNode* statement = statements->at(i).Ptr();
+            if (!statement)
+                continue;
             
             // methods cannot contain methods or structs
             assert (!statement->IsMethodNode());
@@ -1095,9 +1098,11 @@ BytecodeGenerator::BytecodeGenerator(MethodEnv* methodEnv, StatementList* statem
     // declare variables;
     if (statements)
     {
-        for (int i=0; i<statements->size(); ++i)
+        for (unsigned i=0; i<statements->size(); ++i)
         {
             StatementNode* statement = statements->at(i).Ptr();
+            if (!statement)
+                continue;
             
             // methods cannot contain methods or structs
             assert (!statement->IsMethodNode());
@@ -1129,7 +1134,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
     // declare structs
     // declare variables
     
-    for (int i=0; i<statements->size(); ++i)
+    for (unsigned i=0; i<statements->size(); ++i)
     {
         StatementNode* statement = statements->at(i).Ptr();
         if (statement == 0)
@@ -1147,7 +1152,7 @@ BytecodeGenerator::BytecodeGenerator(GlobalData* globalData, StatementList* stat
         }
     }
 
-    for (int i=0; i<statements->size(); ++i)
+    for (unsigned i=0; i<statements->size(); ++i)
     {
         StatementNode* statement = statements->at(i).Ptr();
         if (statement == 0)
@@ -1195,16 +1200,16 @@ void BytecodeGenerator::DeclareArguments(MethodNode* method)
     if (returnType)
     {
         static std::string returnValue("$ReturnValue");
-        DeclareProperty( returnValue, m_globalData->GetTypeOf(returnType) );
+        DeclareProperty( returnValue, m_globalData->GetTypeOf(returnType));
     }
 
     ArgumentNodeList* arguments = method->GetArgumentNodeList();
     if (arguments)
     {
-        for (int i=0; i<arguments->size(); ++i)
+        for (unsigned i=0; i<arguments->size(); ++i)
         {
             ArgumentNode* argument = arguments->at(i).Ptr();
-            DeclareProperty( argument->Identifier()->Value(), m_globalData->GetTypeOf(argument->Type()) );
+            DeclareProperty( argument->Identifier()->Value(), m_globalData->GetTypeOf(argument->Type()), true  );
         }
     }
 }
@@ -1217,7 +1222,7 @@ PassRef<Accessor> BytecodeGenerator::GetProperty(std::string& name, bool onlyLoc
     return m_localScope->GetProperty(name);
 }
 
-void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
+void BytecodeGenerator::DeclareProperty(std::string& name, Type* type, bool isArgument)
 {
     if (m_localScope->HasLocalProperty(name))
     {
@@ -1230,7 +1235,7 @@ void BytecodeGenerator::DeclareProperty(std::string& name, Type* type)
     reg->SetType(type);
     property->SetRegister(reg.Ptr());
     
-    if (type->IsCollectorRef() && reg->Number() >= m_calleeRegisters)
+    if (type->IsCollectorRef() && !isArgument)
     {
         EmitBytecode(op_init_ref);
         EmitRegister(reg.Ptr());
@@ -1259,7 +1264,7 @@ MethodEnv* BytecodeGenerator::Generate()
     StatementList* statements = m_statements.Ptr();
     if (statements)
     {
-        for (int i=0; i<statements->size(); ++i)
+        for (unsigned i=0; i<statements->size(); ++i)
         {
             StatementNode* statement = statements->at(i).Ptr();
             if (statement == 0)
@@ -1279,7 +1284,7 @@ void BytecodeGenerator::FinishMethod()
     m_methodEnv->Compiled(m_maxRegisterCount, m_bytes);
 }
 
-void BytecodeGenerator::EmitBytecode(int bytecode)
+void BytecodeGenerator::EmitBytecode(OpCode bytecode)
 {
     Bytecode b;
     b.Code = bytecode;
@@ -1417,12 +1422,12 @@ Register* BytecodeGenerator::Coerce(Register* reg, Type* otherType)
     return dst;
 }
 
-int BytecodeGenerator::GetLabel()
+unsigned BytecodeGenerator::GetLabel()
 {
     return m_bytes.size();
 }
 
-void BytecodeGenerator::PatchConstantInt(int label, int value)
+void BytecodeGenerator::PatchConstantInt(unsigned label, int value)
 {
     assert(label < m_bytes.size());
     m_bytes.at(label).ConstantInt = value;
@@ -1451,7 +1456,10 @@ void BytecodeGenerator::EmitContinue()
 void MethodEnv::Run(RegisterValue* startingRegister)
 {
     if (!m_compiled)
+    {
         printf("the method is not compiled \n");
+        exit(1);
+    }
         
     RegisterFile* registerFile = m_globalData->GetRegisterFile();
     RegisterValue* lastUsedRegister = registerFile->GetLastUsed();
@@ -1495,7 +1503,7 @@ void MethodEnv::PrependArgumentsFromMethodNode(MethodNode* method)
     ArgumentNodeList* argumentNodeList = method->GetArgumentNodeList();
     if (argumentNodeList)
     {
-        for (int i=0; i<argumentNodeList->size(); ++i)
+        for (unsigned i=0; i<argumentNodeList->size(); ++i)
         {
             m_argumentsType.push_back(m_globalData->GetTypeOf(argumentNodeList->at(i)->Type()));
         }

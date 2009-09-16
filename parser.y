@@ -6,6 +6,8 @@
 %lex-param { void* theScanner }
 
 %{
+#include "Platform.h"
+
 #include <stdio.h>
 #include <string.h>
 #include "ParserArena.h"
@@ -257,7 +259,8 @@ ExpressionStatement:
 ;
 
 MethodNode:
-  TypeDeclaration Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = A(MethodNode($1, $2, $4, $7 )); DBG($$, @1, @8); }
+  TypeDeclaration Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START BRACKET_END   { $$ = A(MethodNode($1, $2, $4, 0 )); DBG($$, @1, @7); }
+| TypeDeclaration Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = A(MethodNode($1, $2, $4, $7 )); DBG($$, @1, @8); }
 | METHOD Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START BRACKET_END   { $$ = A(MethodNode(0, $2, $4, 0 )); DBG($$, @1, @7); }
 | METHOD Identifier PARAN_START ArgumentDeclarationList PARAN_END BRACKET_START InMethodStatementList BRACKET_END   { $$ = A(MethodNode(0, $2, $4, $7 )); DBG($$, @1, @8); }
 ;

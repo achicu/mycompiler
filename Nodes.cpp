@@ -5,6 +5,7 @@
  *  Created by Alexandru Chiculita on 9/10/09.
  *
  */
+#include "Platform.h"
 
 #include "Nodes.h"
 #include <string>
@@ -23,7 +24,7 @@ std::string FloatValueNode::ToString() const
 {
     std::ostringstream o;
     o << "(" << m_value << "f " << LocationToString() << ")";
-	return o.str();
+    return o.str();
 }
 
 Register* FloatValueNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
@@ -50,7 +51,7 @@ std::string IntegerValueNode::ToString() const
 {
     std::ostringstream o;
     o << "(" << m_value << ' ' << LocationToString() << ")";
-	return o.str();
+    return o.str();
 }
 
 Register* IntegerValueNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
@@ -78,7 +79,7 @@ std::string StringValueNode::ToString() const
 {
     std::ostringstream o;
     o << "(\"" << m_value << "\" " << LocationToString() << ")";
-	return o.str();
+    return o.str();
 }
 
 Register* StringValueNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
@@ -134,7 +135,7 @@ std::string IdentifierNode::ToString() const
 {
     std::ostringstream o;
     o << "<<" << m_value << ">>";
-	return o.str();
+    return o.str();
 }
 
 Register* IdentifierNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
@@ -192,7 +193,7 @@ PassRef<Accessor> IdentifierNode::GetAccessor(BytecodeGenerator* generator)
 
 std::string ExpressionNode::ToString() const
 {
-	return std::string("[ExpressionNode ") + LocationToString() + "]";
+    return std::string("[ExpressionNode ") + LocationToString() + "]";
 }
 
 // ============ CallNode ============
@@ -213,7 +214,7 @@ std::string CallNode::ToString() const
     o << " " << LocationToString();
     
     o << ")";
-	return o.str();
+    return o.str();
 }
 
 Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
@@ -315,13 +316,13 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     {
         // create all the registers at once, so that we have them in order
         std::vector<RefPtr<Register> > argumentRegisters;
-        for (int i=0; i<m_arguments->size(); ++i)
+        for (unsigned i=0; i<m_arguments->size(); ++i)
             argumentRegisters.push_back(generator->NewTempRegister());
         
         if (!reg.Ptr())
             reg = argumentRegisters.at(0).Ptr();
         
-        for (int i=0; i<m_arguments->size(); ++i)
+        for (unsigned i=0; i<m_arguments->size(); ++i)
         {
             Register* nice_to_have_dst = argumentRegisters.at(i).Ptr();
             RefPtr<Register> actual_dst = m_arguments->at(i)->EmitBytecode(generator, nice_to_have_dst);
@@ -354,6 +355,8 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     }
     
     generator->EmitBytecode(op_call_method);
+    if (!reg.Ptr())
+        reg = generator->NewTempRegister();
     generator->EmitRegister(reg.Ptr());
     generator->EmitConstantString(name);
     
@@ -364,7 +367,7 @@ Register* CallNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
 
 std::string StatementNode::ToString() const
 {
-	return std::string("[StatementNode ") + LocationToString() + "]";
+    return std::string("[StatementNode ") + LocationToString() + "]";
 }
 
 // ============ BinaryOpNode ============
@@ -789,7 +792,7 @@ std::string TypeNode::CompleteTypeName() const
     if (m_typeNodeList.Ptr())
     {
         o << "<";
-        for (int i=0; i<m_typeNodeList->size(); ++i)
+        for (unsigned i=0; i<m_typeNodeList->size(); ++i)
         {
             assert(m_typeNodeList->at(i).Ptr());
             if (i != 0)
@@ -1160,7 +1163,7 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     assert(m_ifBranch.Ptr());
     
-    for (int i=0; i<m_ifBranch->size(); i++)
+    for (unsigned i=0; i<m_ifBranch->size(); i++)
     {
         generator->EmitNode(m_ifBranch->at(i).Ptr());
     }
@@ -1173,7 +1176,7 @@ Register* IfStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     if (m_elseBranch.Ptr())
     {
-        for (int i=0; i<m_elseBranch->size(); i++)
+        for (unsigned i=0; i<m_elseBranch->size(); i++)
         {
             generator->EmitNode(m_elseBranch->at(i).Ptr());
         }
@@ -1240,7 +1243,7 @@ Register* WhileStatement::EmitBytecode(BytecodeGenerator* generator, Register* d
     }
     
     assert(m_whileBranch.Ptr());
-    for (int i=0; i<m_whileBranch->size(); i++)
+    for (unsigned i=0; i<m_whileBranch->size(); i++)
     {
         generator->EmitNode(m_whileBranch->at(i).Ptr());
     }
@@ -1329,7 +1332,7 @@ Register* ForStatement::EmitBytecode(BytecodeGenerator* generator, Register* dst
     }
     
     assert(m_forBranch.Ptr());
-    for (int i=0; i<m_forBranch->size(); i++)
+    for (unsigned i=0; i<m_forBranch->size(); i++)
     {
         generator->EmitNode(m_forBranch->at(i).Ptr());
     }

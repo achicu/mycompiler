@@ -6,6 +6,9 @@
  *
  */
 
+#ifndef OPCODES_H
+#define OPCODES_H
+
 #define OPCODES(MACRO) \
     MACRO(op_load_float_constant, "rf", 2) \
     MACRO(op_load_int_constant, "ri", 2) \
@@ -92,3 +95,4 @@ enum OpCode
 };
 #undef ENUM_MACRO
 
+#endif // OPCODES_H

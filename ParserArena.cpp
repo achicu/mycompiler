@@ -5,6 +5,7 @@
  *  Created by Alexandru Chiculita on 9/10/09.
  *
  */
+#include "Platform.h"
 
 #include "ParserArena.h"
 #include <string>
@@ -59,7 +60,8 @@ Arena::Arena(std::istream* inputStream)
 
 int Arena::Read(char* buffer, int max_size)
 {
-    int len = m_inputStream->readsome(buffer, max_size);
+    m_inputStream->read(buffer, max_size);
+	int len = m_inputStream->gcount();
     if (len)
     {
         m_sourceCode.write(buffer, len);

@@ -5,17 +5,22 @@
  *  Created by Alexandru Chiculita on 9/14/09.
  *
  */
+#include "Platform.h"
 
 #include "Collector.h"
 #include "RegisterFile.h"
 #include "Interpreter.h"
 #include "BytecodeGenerator.h"
 
+#if PLATFORM(MAC)
 #include <mach/mach_port.h>
 #include <mach/mach_init.h>
 #include <mach/task.h>
 #include <mach/thread_act.h>
 #include <mach/vm_map.h>
+#elif PLATFORM(WIN)
+#include <windows.h>
+#endif
 
 static CollectorBlock* allocateBlock();
 static void freeBlock(CollectorBlock* block);
@@ -29,7 +34,7 @@ void* Heap::Allocate(size_t size)
 //  Collect();
     
     assert(size < CELL_SIZE);
-    for (int i=0; i<m_blocks.size(); ++i)
+    for (unsigned i=0; i<m_blocks.size(); ++i)
     {
         CollectorBlock* const collectorBlock = m_blocks.at(i);
         CollectorCell* const freeList = collectorBlock->freeList;
@@ -67,7 +72,7 @@ void* Heap::Allocate(size_t size)
 
 bool Heap::Collect()
 {
-    for (int i=0; i<m_blocks.size(); ++i)
+    for (unsigned i=0; i<m_blocks.size(); ++i)
     {
         CollectorBlock* const collectorBlock = m_blocks.at(i);
         collectorBlock->marked.ClearAll();
@@ -77,7 +82,7 @@ bool Heap::Collect()
     
     int numberCleaned = 0;
     
-    for (int i=0; i<m_blocks.size(); ++i)
+    for (unsigned i=0; i<m_blocks.size(); ++i)
     {
         CollectorBlock* const collectorBlock = m_blocks.at(i);
         CollectorCell* lastFreeCell = 0;
@@ -155,7 +160,7 @@ void Heap::MarkRegisterFile()
             
             CollectorBlock* blockAddr = reinterpret_cast<CollectorBlock*>(xAsBits - offset);
             
-            for (int i=0; i<m_blocks.size(); ++i)
+            for (unsigned i=0; i<m_blocks.size(); ++i)
             {
                 if (m_blocks.at(i) == blockAddr)
                 {
@@ -174,8 +179,13 @@ void Heap::MarkRegisterFile()
 
 static CollectorBlock* allocateBlock()
 {
+#if PLATFORM(MAC)
     vm_address_t address = 0;
     vm_map(current_task(), &address, BLOCK_SIZE, BLOCK_OFFSET_MASK, VM_FLAGS_ANYWHERE, MEMORY_OBJECT_NULL, 0, FALSE, VM_PROT_DEFAULT, VM_PROT_DEFAULT, VM_INHERIT_DEFAULT);
+#elif PLATFORM(WIN)
+    // windows virtual address granularity is naturally 64k
+    LPVOID address = VirtualAlloc(NULL, BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#endif
     return reinterpret_cast<CollectorBlock*>(address);
 }
 
@@ -201,7 +211,7 @@ bool Heap::CreateNewBlock()
 Heap::~Heap()
 {
     Collect();
-    for (int i=0; i<m_blocks.size(); ++i)
+    for (unsigned i=0; i<m_blocks.size(); ++i)
     {
         CollectorBlock* const collectorBlock = m_blocks.at(i);
         freeBlock(collectorBlock);
@@ -210,7 +220,11 @@ Heap::~Heap()
 
 static void freeBlock(CollectorBlock* block)
 {
+#if PLATFORM(MAC)
     vm_deallocate(current_task(), reinterpret_cast<vm_address_t>(block), BLOCK_SIZE);
+#elif PLATFORM(WIN)
+    VirtualFree(block, 0, MEM_RELEASE);
+#endif
 }
 
 CollectorRef::~CollectorRef()

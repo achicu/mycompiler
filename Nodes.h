@@ -64,7 +64,7 @@ std::string ArenaList<Type>::ToString() const
     std::ostringstream o;
     o << " (";
 
-    for (int i=0; i<ArenaList<Type>::size(); ++i)
+    for (unsigned i=0; i<ArenaList<Type>::size(); ++i)
     {
         if (ArenaList<Type>::at(i).Ptr())
         {

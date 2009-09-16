@@ -5,6 +5,7 @@
  *  Created by Alexandru Chiculita on 9/13/09.
  *
  */
+#include "Platform.h"
 
 #include "RegisterFile.h"
 #include "Interpreter.h"

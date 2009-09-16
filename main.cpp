@@ -1,8 +1,10 @@
+#include "Platform.h"
+#include <iostream>
 #include <fstream>
 #include "ParserArena.h"
 #include "Nodes.h"
 #include "BytecodeGenerator.h"
-		
+        
 int main (int argc, char * const argv[])
 {
     RefPtr<GlobalData> globalData(AdoptRef(new GlobalData()));
@@ -10,7 +12,24 @@ int main (int argc, char * const argv[])
         
     RefPtr<ArenaNode> result;
     
-    std::ifstream inputFile("../../inputfile.txt", std::ifstream::in);
+    if (argc!=2)
+    {
+        printf("usage: mycompiler.exe filename\n");
+        exit(1);
+    }
+
+    std::ifstream inputFile(argv[1], std::ios::in | std::ios::binary);
+    if (!inputFile.is_open())
+
+    {
+
+        printf("file not found\n");
+
+        exit(1);
+
+    }
+
+
     Arena parser (&inputFile);
     result = parser.Parse();
     

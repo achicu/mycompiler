@@ -40,10 +40,7 @@ public:
         return 0;
     }
     
-#ifndef NDEBUG
     bool HasOneRef() const { return m_refCount == 1; }
-#endif
-
     
 private:
     int m_refCount;

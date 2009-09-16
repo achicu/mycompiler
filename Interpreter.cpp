@@ -6,17 +6,23 @@
  *
  */
 
+#include "Platform.h"
+
 #include "Interpreter.h"
 
+#include <sstream>
+#include <stdio.h>
 #include "BytecodeGenerator.h"
 #include "OpCodes.h"
 #include "Collector.h"
-#include <sstream>
+
 
 struct BytecodeMetaData
 {
     const char* name;
+#if PLATFORM(MAC)
     void* label;
+#endif
     int length;
 };
 
@@ -141,10 +147,16 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
     static bool initialized = false;
     if (!initialized)
     {
+#if PLATFORM(MAC)
         #define INITBYTECODE(_opcode, ignored, _length) \
             bytecodeList[_opcode].name= #_opcode; \
             bytecodeList[_opcode].label = &&OPCODE_##_opcode; \
-            bytecodeList[_opcode].length = _length + 1; \
+            bytecodeList[_opcode].length = _length + 1;
+#elif PLATFORM(WIN)
+        #define INITBYTECODE(_opcode, ignored, _length) \
+            bytecodeList[_opcode].name= #_opcode; \
+            bytecodeList[_opcode].length = _length + 1;
+#endif
 
         OPCODES(INITBYTECODE)
         #undef INITBYTECODE
@@ -153,15 +165,14 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
     }
     
     BytecodeMetaData* meta;
-    Bytecode byte;
-    
+   
+#if PLATFORM(MAC)
     #define GOTONEXT() { \
         vPC = vPCNext; \
         if (vPC >= buffer->size()) goto finished; \
         assert(buffer->at(vPC).Code < op_last); \
         meta = &bytecodeList[buffer->at(vPC).Code]; \
         /*printf("%s\n", meta->name);*/ \
-        byte = buffer->at(vPC); \
         vPCNext += meta->length; \
         goto *meta->label; }
     
@@ -169,22 +180,39 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
     #define NEXT() \
         /* for (int z=0; z<registersCount; ++z) printf("register: %d\t\tasInt:%d\t\t\t\tasFloat:%lf\t\t\tasReference:%p\n", z, registers[z].asInt, registers[z].asFloat, registers[z].asReference);*/ \
         GOTONEXT() }
+#elif PLATFORM(WIN)
+    OpCode nextOpCode = op_last;
+
+    #define GOTONEXT() { \
+        vPC = vPCNext; \
+        if (vPC >= buffer->size()) goto finished; \
+        nextOpCode = buffer->at(vPC).Code; \
+        assert(nextOpCode < op_last); \
+        meta = &bytecodeList[nextOpCode]; \
+        /*printf("%s\n", meta->name);*/ \
+        vPCNext += meta->length; \
+       }
+    
+    #define OPCODE(opcode) case opcode: {
+    #define NEXT() \
+        /* for (int z=0; z<registersCount; ++z) printf("register: %d\t\tasInt:%d\t\t\t\tasFloat:%lf\t\t\tasReference:%p\n", z, registers[z].asInt, registers[z].asFloat, registers[z].asReference);*/ \
+        GOTONEXT() } \
+        break;
+#endif
     
     #define V(j) (buffer->at(vPC + j))
     #define RAT(j) (registers[j])
     #define R(j) (RAT(V(j).RegisterNumber))
     
-    int vPCNext=0;
-    int vPC = 0;
-    
+    unsigned vPCNext = 0;
+    unsigned vPC = 0;
+
+    GOTONEXT()
+
+#if PLATFORM(WIN)
+    for(;;) switch(nextOpCode)
+#endif
     {
-        GOTONEXT()
-        
-        /*#define GENERATOR(_opcode, ignored, ignored2) \
-            OPCODE(_opcode) \
-            NEXT() \
-        
-        OPCODES(GENERATOR)*/
         
         OPCODE(op_load_float_constant)
             R(1).asFloat = globalData->GetConstantFloat(V(2).ConstantFloatIndex);
@@ -379,8 +407,7 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             generator.Generate();
             
         NEXT()
-        
-        
+       
         OPCODE(op_coerce_code_string)
             CollectorRef* ref = R(2).asReference;
             if (!ref)
@@ -649,10 +676,16 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
             R(1).asInt = (static_cast<RefString*>(R(3).asReference)->Value == static_cast<RefString*>(R(3).asReference)->Value) ? 1 : 0;
         NEXT()
         
-finished:
-        return;
+#if PLATFORM(WIN)
+        default:
+            assert(false);
+#endif
     }
-        
+
+finished:
+    return;
+
+    #undef RAT
     #undef R
     #undef J
     #undef OPCODE

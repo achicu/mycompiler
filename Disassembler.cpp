@@ -6,6 +6,8 @@
  *
  */
 
+#include "Platform.h"
+
 #include "Disassembler.h"
 
 #include "BytecodeGenerator.h"
@@ -34,7 +36,7 @@ void Disassemble(GlobalData* globalData, const std::vector<Bytecode>* buffer)
         
         initialized = true;
     }
-    for(int i=0; i<buffer->size(); ++i)
+    for(unsigned i=0; i<buffer->size(); ++i)
     {
         assert(buffer->at(i).Code < op_last);
         BytecodeMetaData* meta = &bytecodeList[buffer->at(i).Code];
