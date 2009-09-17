@@ -446,7 +446,7 @@ void Interpret(GlobalData* globalData, RegisterValue* registers, std::vector<Byt
         NEXT()
         OPCODE(op_read_float)
             double inputFloat;
-            scanf("%lf", &inputFloat);
+            scanf("%f", &inputFloat);
             R(1).asFloat = inputFloat;
         NEXT()
         OPCODE(op_read_string)

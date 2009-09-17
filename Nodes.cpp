@@ -526,7 +526,11 @@ Register* AssignNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     reg2 = m_node2->EmitBytecode(generator, reg2.Ptr());
     
     RefPtr<Accessor> accessor( m_node1->GetAccessor(generator) );
-    assert(accessor.Ptr());
+    if (!accessor.Ptr())
+    {
+        printf("invalid left side node %s\n", LocationToString().c_str());
+        exit(1);
+    }
     
     if (!reg2->GetType())
     {
@@ -684,7 +688,11 @@ Register* DotNode::EmitBytecode(BytecodeGenerator* generator, Register* dst)
     
     ObjectType* objectType = static_cast<ObjectType*>(leftDst->GetType());
     PassRef<Accessor> accessor = objectType->GetPropertyAccessor(m_identifier->Value(), leftDst.Ptr());
-    
+    if (!accessor.Ptr())
+    {
+        printf("invalid property %s %s\n", m_identifier->Value().c_str(), LocationToString().c_str());
+        exit(1);
+    }
     return accessor->EmitLoad(generator, dst);
 }
 
@@ -1104,6 +1112,8 @@ Register* ReadStatement::EmitBytecode(BytecodeGenerator* generator, Register* ds
     }
     
     generator->EmitRegister(reg.Ptr());
+    
+    reg->SetType(type);
     
     accessor->EmitSave(generator, reg.Ptr(), 0);
     
